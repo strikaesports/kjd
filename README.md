@@ -105,7 +105,77 @@ Refer to the [Ubuntu Server Setup Guide](docs/ubuntu_server_setup.md) for instru
 
 ---
 
-## 5. Local Testing & Command Line Options
+## 5. UDP Input Receiver & Mobile App Integration
+
+KJD incorporates a high-performance, nonblocking UDP input receiver on port **45821** (default).
+
+### Network Configuration:
+- **Port**: `45821/udp` (configurable via `~/.config/kjd/config.toml` in `[input]`).
+- **Firewall**: Allow incoming UDP traffic on the target machine:
+  ```bash
+  sudo ufw allow 45821/udp
+  ```
+
+### Protocol v1 Datagram Schema:
+Packets are transmitted as UTF-8 encoded JSON over UDP:
+
+#### 1. Movement & Button Packet (`"type": "input"`):
+```json
+{
+  "version": 1,
+  "device_id": "phone-alpha-01",
+  "seq": 1042,
+  "type": "input",
+  "delta": {
+    "x": 0.45,
+    "y": -0.12,
+    "z": 0.0
+  },
+  "buttons": {
+    "left": false,
+    "orbit": true,
+    "zoom": false,
+    "calibrate": false
+  },
+  "auth": "optional_hmac_sha256_signature"
+}
+```
+
+#### 2. Calibration Packet (`"type": "calibrate"`):
+```json
+{
+  "version": 1,
+  "device_id": "phone-alpha-01",
+  "seq": 1043,
+  "type": "calibrate",
+  "reference": {
+    "forward": [0.0, 0.0, 1.0],
+    "up": [0.0, 1.0, 0.0],
+    "right": [1.0, 0.0, 0.0]
+  }
+}
+```
+
+### Button Semantics:
+- **Orbit button held**: Applies X and Y deltas to cube rotation (yaw / pitch).
+- **Zoom button held**: Applies Z delta to camera distance (clamped between 1.0 and 20.0).
+- **Left click**: Single click event emitted on press edge (down transition).
+- **Calibrate button / packet**: Single calibration event emitted on press; resets 3D cube orientation.
+- **Silence timeout**: If no packet arrives for > 250 ms, the receiver disconnects the device and clears all button states.
+
+### Testing with Python Test Sender:
+From your laptop, workstation, or phone Python environment:
+```bash
+# Automated smoke test against server
+python3 scripts/test_udp_sender.py --host <server_ip> --mode all
+
+# Interactive mode (test orbit, zoom, click, calibrate with keyboard commands)
+python3 scripts/test_udp_sender.py --host <server_ip> --mode interactive
+```
+
+---
+
+## 6. Local Testing & Command Line Options
 
 To test locally on the development machine (e.g. inside Omarchy/Hyprland/Wayland):
 
@@ -132,7 +202,7 @@ cmake --build build -j$(nproc)
 
 ---
 
-## 6. Service Management & Logs
+## 7. Service Management & Logs
 
 - **Start**: `systemctl --user start kjd.service`
 - **Stop**: `systemctl --user stop kjd.service`
@@ -143,7 +213,7 @@ cmake --build build -j$(nproc)
 
 ---
 
-## 7. Diagnostics & Troubleshooting
+## 8. Diagnostics & Troubleshooting
 
 To inspect the server environment without making changes:
 ```bash
@@ -154,7 +224,7 @@ For common issues (e.g. GPU drivers, software rendering fallback, rate limits), 
 
 ---
 
-## 8. Project Structure
+## 9. Project Structure
 
 ```text
 kjd/
@@ -162,26 +232,32 @@ kjd/
 ├── README.md                  # Project documentation
 ├── build.sh                   # Server operator build and install script
 ├── config/
-│   └── default.toml           # Configurable display and render parameters
+│   └── default.toml           # Configurable display, scene, and input parameters
 ├── shaders/
 │   ├── cube.vert              # Vertex shader with MVP transformation
-│   └── cube.frag              # Fragment shader with directional/specular lighting
+│   └── cube.frag              # Balanced multi-directional lit fragment shader
 ├── src/
 │   ├── main.cpp               # Entry point, CLI argument parsing, environment check
-│   ├── app.hpp / app.cpp      # Application lifecycle, SDL events, frame timing loop
+│   ├── app.hpp / app.cpp      # Application lifecycle, input events, render loop
 │   ├── renderer.hpp / .cpp    # OpenGL context probe, shaders, 3D cube geometry
-│   ├── scene.hpp / .cpp       # 3D transforms, rotation logic, camera state
+│   ├── scene.hpp / .cpp       # 3D transforms, orbit/zoom navigation, stationary state
+│   ├── input_receiver.hpp/.cpp# UDP Protocol v1 input receiver worker thread
+│   ├── json_helper.hpp        # Lightweight zero-dependency JSON parser
+│   ├── crypto_helper.hpp      # Zero-dependency SHA256 & HMAC-SHA256
 │   ├── math3d.hpp             # Zero-dependency 3D vector and matrix math
 │   ├── config.hpp / .cpp      # Robust TOML configuration parser
 │   └── logger.hpp / .cpp      # Timestamped severity logger (INFO, WARN, ERROR)
 ├── systemd/
 │   └── kjd.service            # Systemd user service unit with crash rate limits
+├── tests/
+│   └── test_input.cpp         # Complete unit tests for UDP receiver & protocol v1
 ├── scripts/
 │   ├── build.sh               # Target native build and user service configuration
+│   ├── test_udp_sender.py     # Mobile controller simulator & automated smoke tester
 │   ├── diagnostics.sh         # Read-only system, GPU, and service diagnostics
 │   ├── install_deps_ubuntu.sh # Ubuntu Server dependency installation
-│   └── kjd-session.sh         # DE session launcher for Ubuntu Server / Wayland
+│   └── kjd-session.sh         # DE session launcher for Ubuntu Server / KMSDRM / Wayland
 └── docs/
-    ├── ubuntu_server_setup.md    # Ubuntu Server initiation and boot guide
+    ├── ubuntu_server_setup.md # Ubuntu Server initiation and boot guide
     └── troubleshooting.md     # Recovery, driver notes, and rollback steps
 ```

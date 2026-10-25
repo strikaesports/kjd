@@ -122,6 +122,7 @@ if [ ! -f "${HOME}/.config/kjd/config.toml" ]; then
     echo "  [+] Created default config at: ${HOME}/.config/kjd/config.toml"
 else
     echo "  [+] Preserved existing config at: ${HOME}/.config/kjd/config.toml"
+    echo "      (To adopt latest defaults such as stationary cube: cp config/default.toml ~/.config/kjd/config.toml)"
 fi
 
 # 5. Systemd user service installation and lifecycle

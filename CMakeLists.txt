@@ -94,6 +94,23 @@ add_custom_command(TARGET kjd POST_BUILD
     COMMENT "Copying assets to build directory"
 )
 
+# Unit Tests
+enable_testing()
+add_executable(test_input
+    tests/test_input.cpp
+    src/input_receiver.cpp
+    src/logger.cpp
+    src/config.cpp
+)
+target_include_directories(test_input PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_link_libraries(test_input PRIVATE
+    pthread
+    m
+)
+add_test(NAME test_input COMMAND test_input)
+
 # Installation targets
 include(GNUInstallDirs)
 install(TARGETS kjd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -101,3 +118,4 @@ install(PROGRAMS scripts/kjd-session.sh DESTINATION ${CMAKE_INSTALL_BINDIR} RENA
 install(DIRECTORY shaders/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kjd/shaders)
 install(FILES config/default.toml DESTINATION ${CMAKE_INSTALL_DATADIR}/kjd/config)
 install(FILES systemd/kjd.service DESTINATION ${CMAKE_INSTALL_DATADIR}/kjd/systemd)
+

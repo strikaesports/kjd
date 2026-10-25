@@ -93,6 +93,7 @@ if [ -f "${HOME}/.local/bin/kjd" ]; then
 fi
 
 install -m 755 build/kjd "${HOME}/.local/bin/kjd"
+install -m 755 scripts/kjd-session.sh "${HOME}/.local/bin/kjd-session"
 cp -f shaders/* "${HOME}/.local/share/kjd/shaders/"
 
 # Copy config if user doesn't already have one
@@ -101,6 +102,8 @@ if [ ! -f "${HOME}/.config/kjd/config.toml" ]; then
     echo "Installed default configuration to ${HOME}/.config/kjd/config.toml"
 else
     echo "Preserving existing user configuration at ${HOME}/.config/kjd/config.toml"
+    echo "Tip: To update your config to latest defaults (e.g. rotate_cube=false, [input] section):"
+    echo "     cp config/default.toml ${HOME}/.config/kjd/config.toml"
 fi
 
 # 5. Install systemd user service unit

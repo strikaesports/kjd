@@ -102,6 +102,49 @@ Log out and log back in for group changes to take effect.
 
 ---
 
+### Issue E: Cube Still Spins After Update
+
+**Symptoms**: The cube continues to auto-rotate even after code update.
+
+**Cause**: The deployment script intentionally preserves existing user configuration at `~/.config/kjd/config.toml` so user changes are not lost. If you had installed an earlier version, `rotate_cube = true` remains in your local user config.
+
+**Resolution**:
+Update your user config file, or copy the new default:
+```bash
+# Option A: Replace with the new default configuration
+cp config/default.toml ~/.config/kjd/config.toml
+
+# Option B: Edit ~/.config/kjd/config.toml and set under [scene]:
+# rotate_cube = false
+
+# Restart the service to apply:
+systemctl --user restart kjd.service
+```
+
+---
+
+### Issue F: UDP Packets Not Received / Mobile Controller Not Connecting
+
+**Symptoms**: `[Input Stats] Connected: No | Packets: 0 accepted` remains at 0 even when the mobile app or sender script is running.
+
+**Resolution**:
+1. Check if the Ubuntu Server firewall is blocking UDP port 45821:
+   ```bash
+   sudo ufw status
+   sudo ufw allow 45821/udp
+   ```
+2. Verify KJD is listening on `0.0.0.0:45821`:
+   ```bash
+   ss -ulnp | grep 45821
+   ```
+3. Check for Wi-Fi AP isolation on your router: Some home/office routers isolate Wi-Fi devices from talking to other local IPs.
+4. Test locally on the server using the test sender tool:
+   ```bash
+   python3 scripts/test_udp_sender.py --host 127.0.0.1 --mode all
+   ```
+
+---
+
 ## 3. Rollback Procedure
 
 To roll back to a previously working build without rebuilding the OS:
@@ -118,3 +161,4 @@ To roll back to a previously working build without rebuilding the OS:
    git checkout <commit-hash>
    ./scripts/deploy.sh --skip-git
    ```
+
