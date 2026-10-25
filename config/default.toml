@@ -1,0 +1,39 @@
+# ==============================================================================
+# KJD Desktop Environment Configuration (Phase 0)
+# ==============================================================================
+
+[window]
+# Set to true to launch in fullscreen mode (recommended for DE operation).
+fullscreen = true
+
+# Resolution for windowed mode (or when fullscreen is false)
+width = 1920
+height = 1080
+
+[render]
+# Target frame rate in frames per second (FPS).
+# Defaults to 60 for hardware-accelerated GPU, 30 for software fallback.
+target_fps = 60
+
+# Vertical sync (VSync) to prevent tearing and avoid spinning CPU.
+vsync = true
+
+# Render scale factor (1.0 = native resolution).
+scale = 1.0
+
+[scene]
+# Enable slow rotation of the initial cube for visual confirmation.
+rotate_cube = true
+
+# Rotation speed in degrees per second.
+rotation_speed = 35.0
+
+# Camera vertical field of view in degrees.
+fov = 60.0
+
+# Camera distance from the cube center.
+camera_distance = 3.5
+
+[stats]
+# Interval in seconds between logging performance summaries (FPS, frame time).
+interval_sec = 5

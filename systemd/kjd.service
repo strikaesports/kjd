@@ -1,0 +1,22 @@
+[Unit]
+Description=KJD Desktop Environment 3D Shell (Phase 0)
+Documentation=https://github.com/strikaesports/kjd
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+# ExecStart looks in user's PATH or default ~/.local/bin
+ExecStart=%h/.local/bin/kjd
+Restart=on-failure
+RestartSec=3s
+StartLimitBurst=3
+StartLimitIntervalSec=30s
+StandardOutput=journal
+StandardError=journal
+
+# Allow inheriting session variables if imported
+PassEnvironment=WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR XDG_CURRENT_DESKTOP
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,15 @@
+# Development notes
+dev/
+
+# Build artifacts
+build/
+bin/
+*.o
+*.a
+*.so
+compile_commands.json
+.ninja_*
+*.log
+.cache/
+.vscode/
+.idea/
