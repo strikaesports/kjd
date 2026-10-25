@@ -3,6 +3,7 @@
 #include "config.hpp"
 #include "renderer.hpp"
 #include "scene.hpp"
+#include "input_receiver.hpp"
 #include <SDL2/SDL.h>
 #include <atomic>
 #include <memory>
@@ -29,6 +30,7 @@ private:
 
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<Scene> m_scene;
+    std::unique_ptr<InputReceiver> m_inputReceiver;
 
     bool m_isFullscreen{false};
     int m_drawableWidth{1920};

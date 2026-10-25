@@ -87,6 +87,18 @@ bool ConfigManager::parseTomlFile(const std::string& filePath, AppConfig& config
                 else if (key == "camera_distance") config.camera_distance = std::stof(val);
             } else if (currentSection == "stats") {
                 if (key == "interval_sec") config.stats_interval_sec = std::stoi(val);
+            } else if (currentSection == "input") {
+                if (key == "enabled") config.input.enabled = parseBool(val, config.input.enabled);
+                else if (key == "bind_address") config.input.bind_address = val;
+                else if (key == "port") config.input.port = std::stoi(val);
+                else if (key == "timeout_ms") config.input.timeout_ms = std::stoi(val);
+                else if (key == "max_datagram_bytes") config.input.max_datagram_bytes = std::stoi(val);
+                else if (key == "authorized_device_id") config.input.authorized_device_id = val;
+                else if (key == "authentication_enabled") config.input.authentication_enabled = parseBool(val, config.input.authentication_enabled);
+                else if (key == "shared_secret") config.input.shared_secret = val;
+                else if (key == "orbit_sensitivity") config.input.orbit_sensitivity = std::stof(val);
+                else if (key == "zoom_sensitivity") config.input.zoom_sensitivity = std::stof(val);
+                else if (key == "max_delta_per_packet") config.input.max_delta_per_packet = std::stof(val);
             } else {
                 // Top level or unqualified keys
                 if (key == "fullscreen") config.fullscreen = parseBool(val, config.fullscreen);

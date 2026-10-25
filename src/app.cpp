@@ -26,7 +26,11 @@ App::App(const AppConfig& config)
 }
 
 App::~App() {
-    KJD_LOG_INFO("Releasing graphics resources and shutting down...");
+    KJD_LOG_INFO("Releasing graphics and input resources...");
+    if (m_inputReceiver) {
+        m_inputReceiver->stop();
+        m_inputReceiver.reset();
+    }
     if (m_renderer) {
         m_renderer->cleanup();
         m_renderer.reset();
@@ -237,6 +241,12 @@ bool App::init() {
     m_scene = std::make_unique<Scene>(m_config);
     KJD_LOG_INFO("3D Scene initialized (Stationary/Rotate: ", (m_scene->isRotating() ? "rotating" : "stationary"), ")");
 
+    // Initialize UDP Input Receiver
+    m_inputReceiver = std::make_unique<InputReceiver>();
+    if (!m_inputReceiver->start(m_config.input)) {
+        KJD_LOG_WARN("InputReceiver could not bind to requested address/port. Running without UDP controller.");
+    }
+
     return true;
 }
 
@@ -301,6 +311,13 @@ void App::logPerformanceStats(double elapsedSeconds) {
 
     KJD_LOG_INFO(ss.str());
 
+    if (m_inputReceiver) {
+        auto inStats = m_inputReceiver->getStats();
+        KJD_LOG_INFO("  [Input Stats] Connected: ", (inStats.connected ? ("Yes ('" + inStats.activeDevice + "')") : "No"),
+                     " | Packets: ", inStats.packetsAccepted, " accepted, ", inStats.packetsRejected, " rejected",
+                     " | Missing seq: ", inStats.missingSequenceCount, " | Timeouts: ", inStats.timeoutCount);
+    }
+
     // Reset periodic counters
     m_frameCount = 0;
     m_totalFrameTime = 0.0;
@@ -328,7 +345,44 @@ int App::run() {
         }
         if (!s_running.load()) break;
 
-        // 2. Compute delta time
+        // 2. Process Mobile UDP Input Events and State
+        if (m_inputReceiver) {
+            auto inputEvents = m_inputReceiver->drainEvents();
+            for (const auto& ev : inputEvents) {
+                switch (ev.type) {
+                    case InputEventType::LeftClick:
+                        KJD_LOG_INFO("[Input Event] Left click event triggered from device '", ev.deviceId, "'");
+                        break;
+                    case InputEventType::CalibrationRequested:
+                        KJD_LOG_INFO("[Input Event] Calibration requested from device '", ev.deviceId, "'. Resetting orientation.");
+                        m_scene->resetOrientation();
+                        break;
+                    case InputEventType::DeviceConnected:
+                        KJD_LOG_INFO("[Input Event] Mobile device connected: '", ev.deviceId, "'");
+                        break;
+                    case InputEventType::DeviceDisconnected:
+                        KJD_LOG_INFO("[Input Event] Mobile device disconnected: '", ev.deviceId, "'");
+                        break;
+                }
+            }
+
+            InputState inState = m_inputReceiver->getLatestState();
+            if (inState.connected) {
+                if (inState.orbitPressed) {
+                    // Positive X: right -> increases yaw
+                    // Positive Y: up -> increases pitch
+                    float orbitSens = m_config.input.orbit_sensitivity * 15.0f;
+                    m_scene->addOrbit(inState.deltaX * orbitSens, inState.deltaY * orbitSens);
+                }
+                if (inState.zoomPressed) {
+                    // Positive Z: forward -> zooms in closer
+                    float zoomSens = m_config.input.zoom_sensitivity * 0.4f;
+                    m_scene->addZoom(inState.deltaZ * zoomSens);
+                }
+            }
+        }
+
+        // 3. Compute delta time
         auto now = Clock::now();
         std::chrono::duration<float> deltaDuration = now - lastTime;
         float deltaTime = deltaDuration.count();
@@ -337,10 +391,10 @@ int App::run() {
         // Clamp excessive delta time (e.g. if paused or dragged)
         if (deltaTime > 0.1f) deltaTime = 0.1f;
 
-        // 3. Update 3D Scene
+        // 4. Update 3D Scene
         m_scene->update(deltaTime);
 
-        // 4. Render Frame to Back Buffer
+        // 5. Render Frame to Back Buffer
         m_renderer->render(*m_scene, m_drawableWidth, m_drawableHeight);
 
         // 5. Present Frame

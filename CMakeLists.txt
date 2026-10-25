@@ -34,6 +34,7 @@ set(SOURCES
     src/scene.cpp
     src/config.cpp
     src/logger.cpp
+    src/input_receiver.cpp
 )
 
 set(HEADERS
@@ -43,6 +44,9 @@ set(HEADERS
     src/config.hpp
     src/logger.hpp
     src/math3d.hpp
+    src/input_receiver.hpp
+    src/json_helper.hpp
+    src/crypto_helper.hpp
 )
 
 add_executable(kjd ${SOURCES} ${HEADERS})

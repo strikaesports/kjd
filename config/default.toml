@@ -22,10 +22,10 @@ vsync = true
 scale = 1.0
 
 [scene]
-# Enable slow rotation of the initial cube for visual confirmation.
-rotate_cube = true
+# Enable auto-rotation of the cube (default false: stationary cube, controlled via input).
+rotate_cube = false
 
-# Rotation speed in degrees per second.
+# Rotation speed in degrees per second when auto-rotation is active.
 rotation_speed = 35.0
 
 # Camera vertical field of view in degrees.
@@ -37,3 +37,35 @@ camera_distance = 3.5
 [stats]
 # Interval in seconds between logging performance summaries (FPS, frame time).
 interval_sec = 5
+
+[input]
+# Enable UDP mobile input receiver
+enabled = true
+
+# Network interface address to bind to (0.0.0.0 listens on all interfaces)
+bind_address = "0.0.0.0"
+
+# UDP port for mobile input packets
+port = 45821
+
+# Connection timeout in milliseconds (marks device disconnected after this duration of silence)
+timeout_ms = 250
+
+# Maximum accepted datagram size in bytes (rejects datagrams larger than this)
+max_datagram_bytes = 1200
+
+# Device ID filter (empty allows any single device, or specify e.g. "mobile-01")
+authorized_device_id = ""
+
+# Require HMAC authentication token on input datagrams
+authentication_enabled = false
+
+# Shared secret key used for HMAC validation (leave empty if authentication_enabled is false)
+shared_secret = ""
+
+# Sensitivity scaling factors for orbit and zoom input
+orbit_sensitivity = 1.0
+zoom_sensitivity = 1.0
+
+# Maximum allowed delta movement per packet (clamps extreme or erroneous samples)
+max_delta_per_packet = 10.0
