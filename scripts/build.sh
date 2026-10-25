@@ -8,24 +8,43 @@
 #  1. Verifies build dependencies (CMake, compiler, SDL2, GLEW, OpenGL).
 #  2. Compiles KJD natively on the server (Release mode).
 #  3. Installs binary to ~/.local/bin/kjd (with automatic backup of old binary).
-#  4. Installs shaders to ~/.local/share/kjd/shaders/.
-#  5. Configures default TOML at ~/.config/kjd/config.toml (if not present).
-#  6. Installs systemd user unit to ~/.config/systemd/user/kjd.service.
-#  7. Reloads systemd daemon and restarts service if currently active.
+#  4. Installs session wrapper to ~/.local/bin/kjd-session.
+#  5. Installs shaders to ~/.local/share/kjd/shaders/.
+#  6. Configures default TOML at ~/.config/kjd/config.toml (if not present).
+#  7. Installs systemd user unit to ~/.config/systemd/user/kjd.service.
+#  8. Reloads systemd daemon and restarts service if currently active.
 #
 # Does NOT require sudo.
 # ==============================================================================
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# Robustly determine the repository root containing CMakeLists.txt
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
+if [ -f "${SCRIPT_DIR}/CMakeLists.txt" ]; then
+    REPO_DIR="${SCRIPT_DIR}"
+elif [ -f "${SCRIPT_DIR}/../CMakeLists.txt" ]; then
+    REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+elif [ -f "$(pwd)/CMakeLists.txt" ]; then
+    REPO_DIR="$(pwd)"
+else
+    echo "ERROR: Cannot locate directory containing CMakeLists.txt"
+    exit 1
+fi
 
 cd "${REPO_DIR}"
 
 echo "=========================================================="
 echo "           KJD Server Build & Setup (Phase 0)             "
 echo "=========================================================="
+echo "Repository root: ${REPO_DIR}"
 
 # 1. Dependency checks
 echo "[1/5] Checking build dependencies..."
@@ -62,7 +81,7 @@ echo "  [+] Build generator: ${GENERATOR}"
 # 2. Native compilation
 echo "[2/5] Configuring and building KJD natively..."
 BUILD_DIR="${REPO_DIR}/build"
-cmake -S . -B "${BUILD_DIR}" -G "${GENERATOR}" -DCMAKE_BUILD_TYPE=Release
+cmake -S "${REPO_DIR}" -B "${BUILD_DIR}" -G "${GENERATOR}" -DCMAKE_BUILD_TYPE=Release
 
 CPU_CORES=$(nproc 2>/dev/null || echo 2)
 echo "  Compiling with ${CPU_CORES} cores..."
@@ -91,15 +110,15 @@ if [ -f "${HOME}/.local/bin/kjd" ]; then
 fi
 
 install -m 755 "${BUILD_DIR}/kjd" "${HOME}/.local/bin/kjd"
-install -m 755 scripts/kjd-session.sh "${HOME}/.local/bin/kjd-session"
-cp -f shaders/* "${HOME}/.local/share/kjd/shaders/"
+install -m 755 "${REPO_DIR}/scripts/kjd-session.sh" "${HOME}/.local/bin/kjd-session"
+cp -f "${REPO_DIR}/shaders/"* "${HOME}/.local/share/kjd/shaders/"
 echo "  [+] Installed executable to: ${HOME}/.local/bin/kjd"
 echo "  [+] Installed session to:    ${HOME}/.local/bin/kjd-session"
 echo "  [+] Installed shaders to:    ${HOME}/.local/share/kjd/shaders/"
 
 # Ensure default configuration is installed without overwriting user changes
 if [ ! -f "${HOME}/.config/kjd/config.toml" ]; then
-    cp config/default.toml "${HOME}/.config/kjd/config.toml"
+    cp "${REPO_DIR}/config/default.toml" "${HOME}/.config/kjd/config.toml"
     echo "  [+] Created default config at: ${HOME}/.config/kjd/config.toml"
 else
     echo "  [+] Preserved existing config at: ${HOME}/.config/kjd/config.toml"
@@ -107,7 +126,7 @@ fi
 
 # 5. Systemd user service installation and lifecycle
 echo "[5/5] Configuring systemd user service..."
-cp -f systemd/kjd.service "${HOME}/.config/systemd/user/kjd.service"
+cp -f "${REPO_DIR}/systemd/kjd.service" "${HOME}/.config/systemd/user/kjd.service"
 
 if command -v systemctl >/dev/null 2>&1; then
     systemctl --user daemon-reload
@@ -131,6 +150,7 @@ echo "=========================================================="
 echo "             Build & Installation Complete!               "
 echo "=========================================================="
 echo "Binary location:  ${HOME}/.local/bin/kjd"
+echo "Session script:   ${HOME}/.local/bin/kjd-session"
 echo "Configuration:    ${HOME}/.config/kjd/config.toml"
 echo ""
 echo "Service Management Commands:"
@@ -141,5 +161,5 @@ echo "  Status:         systemctl --user status kjd.service"
 echo "  View logs:      journalctl --user -u kjd.service -f"
 echo ""
 echo "Direct Console / Session Initiation (Ubuntu Server TTY):"
-echo "  ./scripts/kjd-session.sh"
+echo "  kjd-session   (or: ./scripts/kjd-session.sh)"
 echo "=========================================================="

@@ -8,8 +8,25 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# Robustly locate the repository root containing CMakeLists.txt
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
+if [ -f "${SCRIPT_DIR}/CMakeLists.txt" ]; then
+    REPO_DIR="${SCRIPT_DIR}"
+elif [ -f "${SCRIPT_DIR}/../CMakeLists.txt" ]; then
+    REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+elif [ -f "$(pwd)/CMakeLists.txt" ]; then
+    REPO_DIR="$(pwd)"
+else
+    echo "ERROR: Cannot locate directory containing CMakeLists.txt"
+    exit 1
+fi
 
 cd "${REPO_DIR}"
 
