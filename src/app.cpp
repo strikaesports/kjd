@@ -4,6 +4,7 @@
 #include <chrono>
 #include <thread>
 #include <iomanip>
+#include <vector>
 
 namespace kjd {
 
@@ -51,11 +52,51 @@ bool App::init() {
     std::signal(SIGINT, App::signalHandler);
     std::signal(SIGTERM, App::signalHandler);
 
+    // Configure video driver preference based on active session
+    if (!std::getenv("SDL_VIDEODRIVER")) {
+        if (std::getenv("WAYLAND_DISPLAY") && !std::getenv("DISPLAY")) {
+            setenv("SDL_VIDEODRIVER", "wayland,x11", 1);
+            KJD_LOG_INFO("Configured SDL_VIDEODRIVER=wayland,x11 for Wayland session");
+        } else if (std::getenv("DISPLAY") && !std::getenv("WAYLAND_DISPLAY")) {
+            setenv("SDL_VIDEODRIVER", "x11,wayland", 1);
+            KJD_LOG_INFO("Configured SDL_VIDEODRIVER=x11,wayland for X11 session");
+        }
+    }
+
     KJD_LOG_INFO("Initializing SDL video subsystem...");
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
-        KJD_LOG_ERROR("SDL_Init failed: ", SDL_GetError());
+    bool videoOk = (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) == 0);
+    if (!videoOk) {
+        std::string initialErr = SDL_GetError();
+        KJD_LOG_WARN("Initial SDL_Init failed ('", initialErr, "'). Attempting video driver fallback...");
+
+        // Try candidate drivers based on active environment
+        std::vector<const char*> driverCandidates;
+        if (std::getenv("WAYLAND_DISPLAY")) driverCandidates.push_back("wayland");
+        if (std::getenv("DISPLAY")) driverCandidates.push_back("x11");
+        driverCandidates.push_back("wayland");
+        driverCandidates.push_back("x11");
+        driverCandidates.push_back("KMSDRM");
+
+        for (const char* drv : driverCandidates) {
+            KJD_LOG_INFO("Trying SDL_VideoInit('", drv, "')...");
+            if (SDL_VideoInit(drv) == 0) {
+                videoOk = true;
+                SDL_InitSubSystem(SDL_INIT_EVENTS);
+                KJD_LOG_INFO("Successfully initialized SDL video subsystem using driver: ", drv);
+                break;
+            } else {
+                KJD_LOG_WARN("SDL_VideoInit('", drv, "') failed: ", SDL_GetError());
+            }
+        }
+    }
+
+    if (!videoOk) {
+        KJD_LOG_ERROR("All SDL video initializations failed: ", SDL_GetError());
         return false;
     }
+
+    const char* activeDriver = SDL_GetCurrentVideoDriver();
+    KJD_LOG_INFO("Active SDL Video Driver: ", (activeDriver ? activeDriver : "unknown"));
 
     SDL_version sdlCompiled{}, sdlLinked{};
     SDL_VERSION(&sdlCompiled);

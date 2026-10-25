@@ -35,8 +35,13 @@ else
 fi
 
 # Step 1: Check if display environment variables are already set
-if [ -n "${WAYLAND_DISPLAY:-}" ] || [ -n "${DISPLAY:-}" ]; then
-    echo "Launching KJD in existing graphical environment (WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-none}, DISPLAY=${DISPLAY:-none})..."
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-wayland,x11}"
+    echo "Launching KJD in existing Wayland session (WAYLAND_DISPLAY=${WAYLAND_DISPLAY}, SDL_VIDEODRIVER=${SDL_VIDEODRIVER})..."
+    exec "$KJD_BIN" "$@"
+elif [ -n "${DISPLAY:-}" ]; then
+    export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-x11,wayland}"
+    echo "Launching KJD in existing X11 session (DISPLAY=${DISPLAY}, SDL_VIDEODRIVER=${SDL_VIDEODRIVER})..."
     exec "$KJD_BIN" "$@"
 fi
 
@@ -46,7 +51,8 @@ for i in 0 1 2 3; do
     SOCK="${RUNTIME_DIR}/wayland-${i}"
     if [ -S "$SOCK" ] && [ -w "$SOCK" ]; then
         export WAYLAND_DISPLAY="wayland-${i}"
-        echo "Auto-detected active Wayland display socket: $SOCK -> export WAYLAND_DISPLAY=wayland-${i}"
+        export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-wayland,x11}"
+        echo "Auto-detected active Wayland display socket: $SOCK -> export WAYLAND_DISPLAY=wayland-${i} SDL_VIDEODRIVER=${SDL_VIDEODRIVER}"
         exec "$KJD_BIN" "$@"
     fi
 done
@@ -56,7 +62,8 @@ for i in 0 1 2 3; do
     XSOCK="/tmp/.X11-unix/X${i}"
     if [ -S "$XSOCK" ]; then
         export DISPLAY=":${i}"
-        echo "Auto-detected active X11 display socket: $XSOCK -> export DISPLAY=:${i}"
+        export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-x11,wayland}"
+        echo "Auto-detected active X11 display socket: $XSOCK -> export DISPLAY=:${i} SDL_VIDEODRIVER=${SDL_VIDEODRIVER}"
         exec "$KJD_BIN" "$@"
     fi
 done
