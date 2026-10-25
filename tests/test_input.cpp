@@ -1,9 +1,17 @@
 #include "input_receiver.hpp"
 #include "crypto_helper.hpp"
 #include <iostream>
-#include <cassert>
+#include <cstdlib>
 #include <thread>
 #include <chrono>
+
+#define TEST_ASSERT(cond) \
+    do { \
+        if (!(cond)) { \
+            std::cerr << "\n[FAIL] Assertion failed: (" #cond ") at " << __FILE__ << ":" << __LINE__ << std::endl; \
+            std::exit(1); \
+        } \
+    } while (0)
 
 using namespace kjd;
 
@@ -31,14 +39,14 @@ void runTests() {
             "delta": {"x": 1.2, "y": -0.8, "z": 0.0},
             "buttons": {"left": false, "orbit": true, "zoom": false, "calibrate": false}
         })";
-        assert(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(pkt.data()), pkt.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(pkt.data()), pkt.size(), "127.0.0.1:5000"));
         InputState s = rx.getLatestState();
-        assert(s.connected);
-        assert(s.deviceId == "test-dev-01");
-        assert(s.orbitPressed == true);
-        assert(s.deltaX == 1.2f);
-        assert(s.deltaY == -0.8f);
-        assert(s.deltaZ == 0.0f);
+        TEST_ASSERT(s.connected);
+        TEST_ASSERT(s.deviceId == "test-dev-01");
+        TEST_ASSERT(s.orbitPressed == true);
+        TEST_ASSERT(s.deltaX == 1.2f);
+        TEST_ASSERT(s.deltaY == -0.8f);
+        TEST_ASSERT(s.deltaZ == 0.0f);
         std::cout << "[PASS] 1. Valid input packet parsed and state updated." << std::endl;
     }
 
@@ -48,24 +56,24 @@ void runTests() {
             "version": 1, "device_id": "test-dev-01", "seq": 2, "type": "input",
             "buttons": {"left": false, "orbit": true, "zoom": false, "calibrate": false}
         })";
-        assert(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(missingDelta.data()), missingDelta.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(missingDelta.data()), missingDelta.size(), "127.0.0.1:5000"));
 
         std::string badButtonType = R"({
             "version": 1, "device_id": "test-dev-01", "seq": 3, "type": "input",
             "delta": {"x": 0.0, "y": 0.0, "z": 0.0},
             "buttons": {"left": "not-a-bool", "orbit": true, "zoom": false, "calibrate": false}
         })";
-        assert(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(badButtonType.data()), badButtonType.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(badButtonType.data()), badButtonType.size(), "127.0.0.1:5000"));
         std::cout << "[PASS] 2. Missing and incorrectly typed fields rejected." << std::endl;
     }
 
     // 3. Malformed and oversized datagrams
     {
         std::string malformed = "{ this is not json }";
-        assert(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(malformed.data()), malformed.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(malformed.data()), malformed.size(), "127.0.0.1:5000"));
 
         std::string oversized(600, 'x');
-        assert(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(oversized.data()), oversized.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(oversized.data()), oversized.size(), "127.0.0.1:5000"));
         std::cout << "[PASS] 3. Malformed and oversized datagrams rejected." << std::endl;
     }
 
@@ -76,7 +84,7 @@ void runTests() {
             "delta": {"x": 0.0, "y": 0.0, "z": 0.0},
             "buttons": {"left": false, "orbit": false, "zoom": false, "calibrate": false}
         })";
-        assert(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(badVer.data()), badVer.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(badVer.data()), badVer.size(), "127.0.0.1:5000"));
         std::cout << "[PASS] 4. Unsupported protocol versions rejected." << std::endl;
     }
 
@@ -87,10 +95,10 @@ void runTests() {
             "delta": {"x": 500.0, "y": -200.0, "z": 0.0},
             "buttons": {"left": false, "orbit": true, "zoom": false, "calibrate": false}
         })";
-        assert(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(extremePkt.data()), extremePkt.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(extremePkt.data()), extremePkt.size(), "127.0.0.1:5000"));
         InputState s = rx.getLatestState();
-        assert(s.deltaX == 5.0f);  // Clamped to max_delta_per_packet
-        assert(s.deltaY == -5.0f); // Clamped
+        TEST_ASSERT(s.deltaX == 5.0f);  // Clamped to max_delta_per_packet
+        TEST_ASSERT(s.deltaY == -5.0f); // Clamped
         std::cout << "[PASS] 5. Extreme movement deltas properly clamped." << std::endl;
     }
 
@@ -102,7 +110,7 @@ void runTests() {
             "delta": {"x": 1.0, "y": 1.0, "z": 0.0},
             "buttons": {"left": false, "orbit": true, "zoom": false, "calibrate": false}
         })";
-        assert(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(dupPkt.data()), dupPkt.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(dupPkt.data()), dupPkt.size(), "127.0.0.1:5000"));
 
         // Send seq 3 (older)
         std::string oldPkt = R"({
@@ -110,7 +118,7 @@ void runTests() {
             "delta": {"x": 1.0, "y": 1.0, "z": 0.0},
             "buttons": {"left": false, "orbit": true, "zoom": false, "calibrate": false}
         })";
-        assert(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(oldPkt.data()), oldPkt.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(oldPkt.data()), oldPkt.size(), "127.0.0.1:5000"));
 
         // Jump sequence from 5 to 10 (skipping 4 packets)
         std::string jumpPkt = R"({
@@ -118,9 +126,9 @@ void runTests() {
             "delta": {"x": 1.0, "y": 1.0, "z": 0.0},
             "buttons": {"left": false, "orbit": true, "zoom": false, "calibrate": false}
         })";
-        assert(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(jumpPkt.data()), jumpPkt.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(jumpPkt.data()), jumpPkt.size(), "127.0.0.1:5000"));
         ReceiverStats st = rx.getStats();
-        assert(st.missingSequenceCount == 4);
+        TEST_ASSERT(st.missingSequenceCount == 4);
         std::cout << "[PASS] 6. Stale/duplicate sequence numbers rejected, missing sequences counted." << std::endl;
     }
 
@@ -134,13 +142,13 @@ void runTests() {
             "delta": {"x": 0.0, "y": 0.0, "z": 0.0},
             "buttons": {"left": true, "orbit": false, "zoom": false, "calibrate": false}
         })";
-        assert(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(pressLeft.data()), pressLeft.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(pressLeft.data()), pressLeft.size(), "127.0.0.1:5000"));
         auto events = rx.drainEvents();
         bool foundClick = false;
         for (const auto& ev : events) {
             if (ev.type == InputEventType::LeftClick) foundClick = true;
         }
-        assert(foundClick);
+        TEST_ASSERT(foundClick);
 
         // Keep left held (seq 12) -> should NOT emit another click event
         std::string holdLeft = R"({
@@ -148,13 +156,13 @@ void runTests() {
             "delta": {"x": 0.0, "y": 0.0, "z": 0.0},
             "buttons": {"left": true, "orbit": false, "zoom": false, "calibrate": false}
         })";
-        assert(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(holdLeft.data()), holdLeft.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(holdLeft.data()), holdLeft.size(), "127.0.0.1:5000"));
         auto events2 = rx.drainEvents();
         bool repeatClick = false;
         for (const auto& ev : events2) {
             if (ev.type == InputEventType::LeftClick) repeatClick = true;
         }
-        assert(!repeatClick);
+        TEST_ASSERT(!repeatClick);
         std::cout << "[PASS] 7. Left-click edge detection verified (single event per press)." << std::endl;
     }
 
@@ -169,13 +177,13 @@ void runTests() {
                 "right": [1.0, 0.0, 0.0]
             }
         })";
-        assert(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(goodCalib.data()), goodCalib.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(goodCalib.data()), goodCalib.size(), "127.0.0.1:5000"));
         auto evs = rx.drainEvents();
         bool foundCalib = false;
         for (const auto& ev : evs) {
             if (ev.type == InputEventType::CalibrationRequested) foundCalib = true;
         }
-        assert(foundCalib);
+        TEST_ASSERT(foundCalib);
 
         // Invalid calibration: parallel / non-orthogonal vectors
         std::string badCalib = R"({
@@ -186,7 +194,7 @@ void runTests() {
                 "right": [1.0, 0.0, 0.0]
             }
         })";
-        assert(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(badCalib.data()), badCalib.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(badCalib.data()), badCalib.size(), "127.0.0.1:5000"));
         std::cout << "[PASS] 8. Calibration vector orthogonality validation passed." << std::endl;
     }
 
@@ -198,7 +206,7 @@ void runTests() {
             "delta": {"x": 0.0, "y": 0.0, "z": 0.0},
             "buttons": {"left": false, "orbit": false, "zoom": false, "calibrate": false}
         })";
-        assert(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(rogue.data()), rogue.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!rx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(rogue.data()), rogue.size(), "127.0.0.1:5000"));
         std::cout << "[PASS] 9. Unauthorized device rejected during active pairing." << std::endl;
     }
 
@@ -216,11 +224,11 @@ void runTests() {
         std::string validAuth = Sha256::hmac(authCfg.shared_secret, validCanonical);
 
         std::string authPacket = "{\"version\": 1, \"device_id\": \"mobile-01\", \"seq\": 1, \"type\": \"input\", \"auth\": \"" + validAuth + "\", \"delta\": {\"x\": 0.0, \"y\": 0.0, \"z\": 0.0}, \"buttons\": {\"left\": false, \"orbit\": false, \"zoom\": false, \"calibrate\": false}}";
-        assert(authRx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(authPacket.data()), authPacket.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(authRx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(authPacket.data()), authPacket.size(), "127.0.0.1:5000"));
 
         // Send packet with forged/tampered auth token
         std::string tamperedPacket = "{\"version\": 1, \"device_id\": \"mobile-01\", \"seq\": 2, \"type\": \"input\", \"auth\": \"wrong_hmac_signature_value\", \"delta\": {\"x\": 0.0, \"y\": 0.0, \"z\": 0.0}, \"buttons\": {\"left\": false, \"orbit\": false, \"zoom\": false, \"calibrate\": false}}";
-        assert(!authRx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(tamperedPacket.data()), tamperedPacket.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(!authRx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(tamperedPacket.data()), tamperedPacket.size(), "127.0.0.1:5000"));
         std::cout << "[PASS] 10. HMAC-SHA256 authentication correctly validated and forged tokens rejected." << std::endl;
     }
 
@@ -233,8 +241,8 @@ void runTests() {
         netCfg.timeout_ms = 150;
 
         InputReceiver netRx;
-        assert(netRx.start(netCfg));
-        assert(netRx.isRunning());
+        TEST_ASSERT(netRx.start(netCfg));
+        TEST_ASSERT(netRx.isRunning());
 
         // Send a valid packet via buffer directly
         std::string pkt = R"({
@@ -242,28 +250,28 @@ void runTests() {
             "delta": {"x": 1.0, "y": 0.0, "z": 0.0},
             "buttons": {"left": false, "orbit": true, "zoom": false, "calibrate": false}
         })";
-        assert(netRx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(pkt.data()), pkt.size(), "127.0.0.1:5000"));
-        assert(netRx.getLatestState().connected);
+        TEST_ASSERT(netRx.processDatagramBuffer(reinterpret_cast<const uint8_t*>(pkt.data()), pkt.size(), "127.0.0.1:5000"));
+        TEST_ASSERT(netRx.getLatestState().connected);
 
-        // Wait past timeout (200 ms > 150 ms timeout)
+        // Wait past timeout (220 ms > 150 ms timeout)
         std::this_thread::sleep_for(std::chrono::milliseconds(220));
 
         // State should now be disconnected with all buttons cleared
         InputState s = netRx.getLatestState();
-        assert(!s.connected);
-        assert(!s.orbitPressed);
-        assert(!s.leftPressed);
+        TEST_ASSERT(!s.connected);
+        TEST_ASSERT(!s.orbitPressed);
+        TEST_ASSERT(!s.leftPressed);
 
         auto evs = netRx.drainEvents();
         bool foundDisconnect = false;
         for (const auto& ev : evs) {
             if (ev.type == InputEventType::DeviceDisconnected) foundDisconnect = true;
         }
-        assert(foundDisconnect);
+        TEST_ASSERT(foundDisconnect);
 
         // Test clean deterministic shutdown while worker is listening
         netRx.stop();
-        assert(!netRx.isRunning());
+        TEST_ASSERT(!netRx.isRunning());
         std::cout << "[PASS] 11. Network bind, timeout state reset, and clean thread shutdown verified." << std::endl;
     }
 
