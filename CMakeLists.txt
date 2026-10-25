@@ -93,6 +93,7 @@ add_custom_command(TARGET kjd POST_BUILD
 # Installation targets
 include(GNUInstallDirs)
 install(TARGETS kjd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(PROGRAMS scripts/kjd-session.sh DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME kjd-session)
 install(DIRECTORY shaders/ DESTINATION ${CMAKE_INSTALL_DATADIR}/kjd/shaders)
 install(FILES config/default.toml DESTINATION ${CMAKE_INSTALL_DATADIR}/kjd/config)
 install(FILES systemd/kjd.service DESTINATION ${CMAKE_INSTALL_DATADIR}/kjd/systemd)

@@ -45,8 +45,13 @@ apt-get install -y cage || {
     apt-get install -y xorg xinit || true
 }
 
+if [ -n "${SUDO_USER:-}" ]; then
+    echo "Adding user '${SUDO_USER}' to video, render, and input groups for direct DRM/GPU access..."
+    usermod -aG video,render,input "${SUDO_USER}" || true
+fi
+
 echo "=================================================="
 echo " All Ubuntu Server dependencies installed successfully!"
-echo " You can now compile and deploy KJD with:"
-echo "   ./scripts/deploy.sh"
+echo " Next step: Pull and build KJD natively on this server:"
+echo "   ./build.sh"
 echo "=================================================="

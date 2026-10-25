@@ -91,8 +91,10 @@ if [ -f "${HOME}/.local/bin/kjd" ]; then
 fi
 
 install -m 755 "${BUILD_DIR}/kjd" "${HOME}/.local/bin/kjd"
+install -m 755 scripts/kjd-session.sh "${HOME}/.local/bin/kjd-session"
 cp -f shaders/* "${HOME}/.local/share/kjd/shaders/"
 echo "  [+] Installed executable to: ${HOME}/.local/bin/kjd"
+echo "  [+] Installed session to:    ${HOME}/.local/bin/kjd-session"
 echo "  [+] Installed shaders to:    ${HOME}/.local/share/kjd/shaders/"
 
 # Ensure default configuration is installed without overwriting user changes

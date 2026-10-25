@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <unistd.h>
 
 constexpr const char* KJD_VERSION = "0.1.0-phase0";
 
@@ -74,21 +75,53 @@ int main(int argc, char* argv[]) {
     KJD_LOG_INFO("Starting KJD Desktop Environment — Version ", KJD_VERSION);
     KJD_LOG_INFO("=================================================");
 
-    // Check display environment
+    // Check and auto-detect display environment
     const char* waylandDisplay = std::getenv("WAYLAND_DISPLAY");
     const char* x11Display = std::getenv("DISPLAY");
+
+    // Auto-detect Wayland socket in XDG_RUNTIME_DIR if WAYLAND_DISPLAY is not explicitly set
+    if (!waylandDisplay) {
+        const char* xdgRuntime = std::getenv("XDG_RUNTIME_DIR");
+        std::string runtimeDir = (xdgRuntime && *xdgRuntime) ? xdgRuntime : ("/run/user/" + std::to_string(getuid()));
+        for (int i = 0; i <= 3; ++i) {
+            std::string socketName = "wayland-" + std::to_string(i);
+            std::string socketPath = runtimeDir + "/" + socketName;
+            if (access(socketPath.c_str(), R_OK | W_OK) == 0) {
+                setenv("WAYLAND_DISPLAY", socketName.c_str(), 1);
+                waylandDisplay = std::getenv("WAYLAND_DISPLAY");
+                KJD_LOG_INFO("Auto-detected active Wayland display socket at: ", socketPath);
+                break;
+            }
+        }
+    }
+
+    // Auto-detect X11 socket in /tmp/.X11-unix if DISPLAY is not explicitly set
+    if (!x11Display && !waylandDisplay) {
+        for (int i = 0; i <= 3; ++i) {
+            std::string xSocket = "/tmp/.X11-unix/X" + std::to_string(i);
+            if (access(xSocket.c_str(), R_OK) == 0) {
+                std::string dispName = ":" + std::to_string(i);
+                setenv("DISPLAY", dispName.c_str(), 1);
+                x11Display = std::getenv("DISPLAY");
+                KJD_LOG_INFO("Auto-detected active X11 display socket at: ", xSocket);
+                break;
+            }
+        }
+    }
+
     if (!waylandDisplay && !x11Display) {
-        KJD_LOG_ERROR("Neither WAYLAND_DISPLAY nor DISPLAY is set in the current environment.");
-        KJD_LOG_ERROR("KJD requires an active graphical session (e.g. Wayland compositor, cage, or X11).");
-        KJD_LOG_ERROR("If running on Ubuntu Server, ensure your display manager or compositor (e.g. 'cage -- kjd') is started.");
+        KJD_LOG_ERROR("Neither WAYLAND_DISPLAY nor DISPLAY is set or active in /run/user/", getuid(), " or /tmp/.X11-unix.");
+        KJD_LOG_ERROR("KJD requires an active Wayland compositor or X11 server.");
+        KJD_LOG_ERROR("To initiate the DE on Ubuntu Server without an existing desktop, run:");
+        KJD_LOG_ERROR("  kjd-session   (or: cage -- kjd)");
         return 1;
     }
 
     if (waylandDisplay) {
-        KJD_LOG_INFO("Detected Wayland display: ", waylandDisplay);
+        KJD_LOG_INFO("Active Wayland display: ", waylandDisplay);
     }
     if (x11Display) {
-        KJD_LOG_INFO("Detected X11 display: ", x11Display);
+        KJD_LOG_INFO("Active X11 display: ", x11Display);
     }
 
     // Load configuration
