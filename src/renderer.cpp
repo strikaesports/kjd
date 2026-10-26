@@ -40,6 +40,12 @@ uniform vec3 uLightDir;
 uniform vec3 uViewPos;
 
 void main() {
+    // For wireframe edges (normal length near zero), output crisp unlit white color
+    if (length(vNormal) < 0.1) {
+        FragColor = vec4(vColor, 1.0);
+        return;
+    }
+
     float ambientStrength = 0.80;
     vec3 ambient = ambientStrength * vColor;
 
@@ -220,63 +226,34 @@ bool Renderer::initShaders() {
 }
 
 bool Renderer::initGeometry() {
-    // 36 vertices defining 6 faces of the cube with distinct colors
-    // Face colors:
-    // Front:  Teal/Cyan       (0.12, 0.75, 0.78)
-    // Back:   Deep Blue       (0.18, 0.35, 0.72)
-    // Top:    Violet/Purple   (0.68, 0.38, 0.88)
-    // Bottom: Crimson/Pink    (0.82, 0.22, 0.45)
-    // Right:  Amber/Gold      (0.95, 0.65, 0.22)
-    // Left:   Emerald/Mint    (0.22, 0.85, 0.55)
+    // 12 edges (24 vertices) defining the white wireframe bounding box of the cube
+    // Corners of unit cube [-0.5, 0.5]:
+    // C0: (-0.5, -0.5, -0.5)  C1: ( 0.5, -0.5, -0.5)
+    // C2: ( 0.5,  0.5, -0.5)  C3: (-0.5,  0.5, -0.5)
+    // C4: (-0.5, -0.5,  0.5)  C5: ( 0.5, -0.5,  0.5)
+    // C6: ( 0.5,  0.5,  0.5)  C7: (-0.5,  0.5,  0.5)
+
+    const float r = 1.0f, g = 1.0f, b = 1.0f; // Pure white edges (#FFFFFF)
+    const float nx = 0.0f, ny = 0.0f, nz = 0.0f; // Zero normal indicates wireframe unlit edge
 
     const std::vector<Vertex> vertices = {
-        // Front face (+Z) - Normal (0, 0, 1) - Cyan
-        {-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.12f, 0.75f, 0.78f},
-        { 0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.12f, 0.75f, 0.78f},
-        { 0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.12f, 0.75f, 0.78f},
-        { 0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.12f, 0.75f, 0.78f},
-        {-0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.12f, 0.75f, 0.78f},
-        {-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.12f, 0.75f, 0.78f},
+        // Bottom loop (Z = -0.5)
+        {-0.5f, -0.5f, -0.5f, nx, ny, nz, r, g, b}, { 0.5f, -0.5f, -0.5f, nx, ny, nz, r, g, b}, // C0 -> C1
+        { 0.5f, -0.5f, -0.5f, nx, ny, nz, r, g, b}, { 0.5f,  0.5f, -0.5f, nx, ny, nz, r, g, b}, // C1 -> C2
+        { 0.5f,  0.5f, -0.5f, nx, ny, nz, r, g, b}, {-0.5f,  0.5f, -0.5f, nx, ny, nz, r, g, b}, // C2 -> C3
+        {-0.5f,  0.5f, -0.5f, nx, ny, nz, r, g, b}, {-0.5f, -0.5f, -0.5f, nx, ny, nz, r, g, b}, // C3 -> C0
 
-        // Back face (-Z) - Normal (0, 0, -1) - Deep Blue
-        {-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.18f, 0.35f, 0.72f},
-        {-0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.18f, 0.35f, 0.72f},
-        { 0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.18f, 0.35f, 0.72f},
-        { 0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.18f, 0.35f, 0.72f},
-        { 0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.18f, 0.35f, 0.72f},
-        {-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.18f, 0.35f, 0.72f},
+        // Top loop (Z = +0.5)
+        {-0.5f, -0.5f,  0.5f, nx, ny, nz, r, g, b}, { 0.5f, -0.5f,  0.5f, nx, ny, nz, r, g, b}, // C4 -> C5
+        { 0.5f, -0.5f,  0.5f, nx, ny, nz, r, g, b}, { 0.5f,  0.5f,  0.5f, nx, ny, nz, r, g, b}, // C5 -> C6
+        { 0.5f,  0.5f,  0.5f, nx, ny, nz, r, g, b}, {-0.5f,  0.5f,  0.5f, nx, ny, nz, r, g, b}, // C6 -> C7
+        {-0.5f,  0.5f,  0.5f, nx, ny, nz, r, g, b}, {-0.5f, -0.5f,  0.5f, nx, ny, nz, r, g, b}, // C7 -> C4
 
-        // Top face (+Y) - Normal (0, 1, 0) - Violet
-        {-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  0.68f, 0.38f, 0.88f},
-        {-0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  0.68f, 0.38f, 0.88f},
-        { 0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  0.68f, 0.38f, 0.88f},
-        { 0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  0.68f, 0.38f, 0.88f},
-        { 0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  0.68f, 0.38f, 0.88f},
-        {-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  0.68f, 0.38f, 0.88f},
-
-        // Bottom face (-Y) - Normal (0, -1, 0) - Crimson
-        {-0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f, 0.82f, 0.22f, 0.45f},
-        { 0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f, 0.82f, 0.22f, 0.45f},
-        { 0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f, 0.82f, 0.22f, 0.45f},
-        { 0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f, 0.82f, 0.22f, 0.45f},
-        {-0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f, 0.82f, 0.22f, 0.45f},
-        {-0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f, 0.82f, 0.22f, 0.45f},
-
-        // Right face (+X) - Normal (1, 0, 0) - Amber
-        { 0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  0.95f, 0.65f, 0.22f},
-        { 0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  0.95f, 0.65f, 0.22f},
-        { 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f,  0.95f, 0.65f, 0.22f},
-        { 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f,  0.95f, 0.65f, 0.22f},
-        { 0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,  0.95f, 0.65f, 0.22f},
-        { 0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  0.95f, 0.65f, 0.22f},
-
-        // Left face (-X) - Normal (-1, 0, 0) - Emerald
-        {-0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,  0.22f, 0.85f, 0.55f},
-        {-0.5f, -0.5f,  0.5f, -1.0f, 0.0f, 0.0f,  0.22f, 0.85f, 0.55f},
-        {-0.5f,  0.5f,  0.5f, -1.0f, 0.0f, 0.0f,  0.22f, 0.85f, 0.55f},
-        {-0.5f,  0.5f,  0.5f, -1.0f, 0.0f, 0.0f,  0.22f, 0.85f, 0.55f},
-        {-0.5f,  0.5f, -0.5f, -1.0f, 0.0f, 0.0f,  0.22f, 0.85f, 0.55f},
-        {-0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,  0.22f, 0.85f, 0.55f}
+        // 4 Connecting vertical pillars
+        {-0.5f, -0.5f, -0.5f, nx, ny, nz, r, g, b}, {-0.5f, -0.5f,  0.5f, nx, ny, nz, r, g, b}, // C0 -> C4
+        { 0.5f, -0.5f, -0.5f, nx, ny, nz, r, g, b}, { 0.5f, -0.5f,  0.5f, nx, ny, nz, r, g, b}, // C1 -> C5
+        { 0.5f,  0.5f, -0.5f, nx, ny, nz, r, g, b}, { 0.5f,  0.5f,  0.5f, nx, ny, nz, r, g, b}, // C2 -> C6
+        {-0.5f,  0.5f, -0.5f, nx, ny, nz, r, g, b}, {-0.5f,  0.5f,  0.5f, nx, ny, nz, r, g, b}  // C3 -> C7
     };
 
     glGenVertexArrays(1, &m_vao);
@@ -360,8 +337,10 @@ void Renderer::render(const Scene& scene, int drawableWidth, int drawableHeight)
     Vec3 camPos = scene.getCameraPosition();
     glUniform3f(m_locViewPos, camPos.x, camPos.y, camPos.z);
 
+    // Render wireframe cube with white edges
     glBindVertexArray(m_vao);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glLineWidth(2.0f);
+    glDrawArrays(GL_LINES, 0, 24);
     glBindVertexArray(0);
 
     glUseProgram(0);

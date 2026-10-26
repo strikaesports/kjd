@@ -10,6 +10,12 @@ uniform vec3 uLightDir;
 uniform vec3 uViewPos;
 
 void main() {
+    // For wireframe edges (normal length near zero), output crisp unlit white color
+    if (length(vNormal) < 0.1) {
+        FragColor = vec4(vColor, 1.0);
+        return;
+    }
+
     // Constant multi-directional illumination from all sides
     // High ambient base guarantees every side is brightly and constantly lit
     float ambientStrength = 0.80;

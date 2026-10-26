@@ -35,6 +35,7 @@ set(SOURCES
     src/config.cpp
     src/logger.cpp
     src/input_receiver.cpp
+    src/voxel_volume.cpp
 )
 
 set(HEADERS
@@ -47,6 +48,8 @@ set(HEADERS
     src/input_receiver.hpp
     src/json_helper.hpp
     src/crypto_helper.hpp
+    src/voxel_color.hpp
+    src/voxel_volume.hpp
 )
 
 add_executable(kjd ${SOURCES} ${HEADERS})
@@ -110,6 +113,18 @@ target_link_libraries(test_input PRIVATE
     m
 )
 add_test(NAME test_input COMMAND test_input)
+
+add_executable(test_voxel
+    tests/test_voxel.cpp
+    src/voxel_volume.cpp
+)
+target_include_directories(test_voxel PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_link_libraries(test_voxel PRIVATE
+    m
+)
+add_test(NAME test_voxel COMMAND test_voxel)
 
 # Installation targets
 include(GNUInstallDirs)

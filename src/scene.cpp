@@ -1,4 +1,5 @@
 #include "scene.hpp"
+#include "logger.hpp"
 #include <algorithm>
 
 namespace kjd {
@@ -13,6 +14,10 @@ Scene::Scene(const AppConfig& config)
     m_cameraPos = Vec3(0.0f, 1.2f, m_cameraDistance);
     m_target = Vec3(0.0f, 0.0f, 0.0f);
     m_up = Vec3(0.0f, 1.0f, 0.0f);
+
+    m_voxelVolume = std::make_unique<VoxelVolume>(100, 100, 100);
+    KJD_LOG_INFO("Allocated 100x100x100 voxel grid in RAM (",
+                 m_voxelVolume->sizeBytes(), " bytes / ~1.91 MiB, format: RGBA4444, invisible/transparent)");
 }
 
 void Scene::update(float deltaTime) {

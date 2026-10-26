@@ -2,11 +2,13 @@
 
 **KJD** is an experimental Linux desktop environment built around a **3D workspace** rather than a traditional 2D desktop.
 
-## Phase 0: Black Void + 3D Cube
+## Phase 0: Black Void + White Wireframe Cube & Voxel Volume
 
 This repository contains the **Phase 0** prototype:
 - Opens a fullscreen graphical surface with a pitch-black void background.
-- Renders a 3D cube with perspective, directional and ambient lighting, and smooth rotation.
+- Renders a 3D bounding wireframe cube with crisp white edges (`#FFFFFF`).
+- Allocates an in-RAM 100 × 100 × 100 dense voxel volume (2,000,000 bytes, ~1.91 MiB) with **RGBA4444** color encoding, defaulting to invisible voxels.
+- Embedded high-performance UDP input receiver (port 45821) supporting orbit/zoom mouse/gyro navigation.
 - Probes and reports active graphics context (API, vendor, renderer, hardware acceleration vs software rasterizer).
 - Periodically tracks and logs performance metrics (average FPS, frame times, min/max).
 - Runs as a `systemd` user service or standalone session.
@@ -239,8 +241,10 @@ kjd/
 ├── src/
 │   ├── main.cpp               # Entry point, CLI argument parsing, environment check
 │   ├── app.hpp / app.cpp      # Application lifecycle, input events, render loop
-│   ├── renderer.hpp / .cpp    # OpenGL context probe, shaders, 3D cube geometry
-│   ├── scene.hpp / .cpp       # 3D transforms, orbit/zoom navigation, stationary state
+│   ├── renderer.hpp / .cpp    # OpenGL context probe, shaders, wireframe cube geometry
+│   ├── scene.hpp / .cpp       # 3D transforms, orbit/zoom navigation, holds VoxelVolume
+│   ├── voxel_color.hpp        # RGBA4444 16-bit color packing, unpacking, expansion
+│   ├── voxel_volume.hpp / .cpp# Dense 100x100x100 (2MB) RAM voxel volume
 │   ├── input_receiver.hpp/.cpp# UDP Protocol v1 input receiver worker thread
 │   ├── json_helper.hpp        # Lightweight zero-dependency JSON parser
 │   ├── crypto_helper.hpp      # Zero-dependency SHA256 & HMAC-SHA256
@@ -250,7 +254,8 @@ kjd/
 ├── systemd/
 │   └── kjd.service            # Systemd user service unit with crash rate limits
 ├── tests/
-│   └── test_input.cpp         # Complete unit tests for UDP receiver & protocol v1
+│   ├── test_input.cpp         # Complete unit tests for UDP receiver & protocol v1
+│   └── test_voxel.cpp         # Unit tests for RGBA4444 color format & VoxelVolume
 ├── scripts/
 │   ├── build.sh               # Target native build and user service configuration
 │   ├── test_udp_sender.py     # Mobile controller simulator & automated smoke tester
@@ -258,6 +263,7 @@ kjd/
 │   ├── install_deps_ubuntu.sh # Ubuntu Server dependency installation
 │   └── kjd-session.sh         # DE session launcher for Ubuntu Server / KMSDRM / Wayland
 └── docs/
+    ├── voxel_format.md        # RGBA4444 voxel color format & volume specification
     ├── ubuntu_server_setup.md # Ubuntu Server initiation and boot guide
     └── troubleshooting.md     # Recovery, driver notes, and rollback steps
 ```

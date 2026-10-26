@@ -2,6 +2,8 @@
 
 #include "math3d.hpp"
 #include "config.hpp"
+#include "voxel_volume.hpp"
+#include <memory>
 
 namespace kjd {
 
@@ -32,7 +34,12 @@ public:
     float getPitch() const { return m_pitchAngle; }
     float getCameraDistance() const { return m_cameraDistance; }
 
+    VoxelVolume* getVoxelVolume() { return m_voxelVolume.get(); }
+    const VoxelVolume* getVoxelVolume() const { return m_voxelVolume.get(); }
+
 private:
+    std::unique_ptr<VoxelVolume> m_voxelVolume;
+
     bool m_rotateCube{false};
     float m_rotationSpeed{35.0f}; // deg/sec
     float m_yawAngle{35.0f};      // deg
