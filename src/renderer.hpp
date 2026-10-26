@@ -34,7 +34,8 @@ private:
     bool initShaders();
     bool initGeometry();
     bool initHud();
-    void renderHud(int width, int height, const InputState& inputState, const ReceiverStats& inputStats);
+    void renderHud(int width, int height, const InputState& inputState, const ReceiverStats& inputStats,
+                   int cursorX = 50, int cursorY = 50, int cursorZ = 50);
     void probeGraphicsContext();
     std::string loadShaderSource(const std::string& path);
 

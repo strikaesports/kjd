@@ -85,6 +85,7 @@ bool ConfigManager::parseTomlFile(const std::string& filePath, AppConfig& config
                 else if (key == "rotation_speed") config.rotation_speed = std::stof(val);
                 else if (key == "fov") config.fov = std::stof(val);
                 else if (key == "camera_distance") config.camera_distance = std::stof(val);
+                else if (key == "idle_animation") config.idle_animation = parseBool(val, config.idle_animation);
             } else if (currentSection == "stats") {
                 if (key == "interval_sec") config.stats_interval_sec = std::stoi(val);
             } else if (currentSection == "input") {

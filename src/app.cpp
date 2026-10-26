@@ -282,9 +282,23 @@ void App::handleEvent(const SDL_Event& event) {
                     KJD_LOG_INFO("Cube rotation: ", (m_scene->isRotating() ? "Resumed" : "Paused"));
                 }
                 break;
-            default:
-                break;
+    } else if (event.type == SDL_MOUSEMOTION) {
+        if (event.motion.state & SDL_BUTTON_RMASK) {
+            // Right-click drag orbits the cube
+            float sens = 0.3f;
+            m_scene->addOrbit(static_cast<float>(event.motion.xrel) * sens,
+                              -static_cast<float>(event.motion.yrel) * sens);
+        } else {
+            // Mouse movement drives the 5x5x5 cursor
+            float mouseSens = 0.5f;
+            m_scene->moveCursor(static_cast<float>(event.motion.xrel) * mouseSens,
+                                -static_cast<float>(event.motion.yrel) * mouseSens,
+                                0.0f);
         }
+    } else if (event.type == SDL_MOUSEWHEEL) {
+        // Mouse wheel moves cursor in depth (Z axis)
+        float wheelSens = 2.0f;
+        m_scene->moveCursor(0.0f, 0.0f, static_cast<float>(event.wheel.y) * wheelSens);
     } else if (event.type == SDL_WINDOWEVENT) {
         if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
             event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
@@ -357,8 +371,9 @@ int App::run() {
                         KJD_LOG_INFO("[Input Event] Left click event triggered from device '", ev.deviceId, "'");
                         break;
                     case InputEventType::CalibrationRequested:
-                        KJD_LOG_INFO("[Input Event] Calibration requested from device '", ev.deviceId, "'. Resetting orientation.");
+                        KJD_LOG_INFO("[Input Event] Calibration requested from device '", ev.deviceId, "'. Resetting orientation and cursor.");
                         m_scene->resetOrientation();
+                        m_scene->resetCursor();
                         break;
                     case InputEventType::DeviceConnected:
                         KJD_LOG_INFO("[Input Event] Mobile device connected: '", ev.deviceId, "'");
@@ -378,11 +393,18 @@ int App::run() {
                     // Positive Y: up -> increases pitch
                     float orbitSens = m_config.input.orbit_sensitivity * 15.0f;
                     m_scene->addOrbit(inState.deltaX * orbitSens, inState.deltaY * orbitSens);
-                }
-                if (inState.zoomPressed) {
+                } else if (inState.zoomPressed) {
                     // Positive Z: forward -> zooms in closer
                     float zoomSens = m_config.input.zoom_sensitivity * 0.4f;
                     m_scene->addZoom(inState.deltaZ * zoomSens);
+                } else {
+                    // Move 5x5x5 cursor along with mouse gadget deltas
+                    if (inState.deltaX != 0.0f || inState.deltaY != 0.0f || inState.deltaZ != 0.0f) {
+                        float cursorSens = m_config.input.orbit_sensitivity * 1.5f;
+                        m_scene->moveCursor(inState.deltaX * cursorSens,
+                                            inState.deltaY * cursorSens,
+                                            inState.deltaZ * cursorSens);
+                    }
                 }
             }
         }

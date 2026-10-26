@@ -24,6 +24,7 @@ Features:
 
 import sys
 import time
+import math
 import json
 import socket
 import hmac
@@ -123,6 +124,22 @@ def run_zoom_test(sender: KjdSender, duration: float = 3.0):
     sender.send_input(dx=0.0, dy=0.0, dz=0.0, zoom=False)
     print("  -> Zoom test complete. Camera distance should have adjusted.")
 
+def run_cursor_test(sender: KjdSender, duration: float = 3.0):
+    print(f"\n[CURSOR TEST] Moving 5x5x5 cursor inside cube for {duration:.1f}s via mouse gadget...")
+    start = time.time()
+    dt = 1.0 / 60.0
+    while time.time() - start < duration:
+        elapsed = time.time() - start
+        # Move in a circular/lissajous path: dx and dy deltas
+        dx = 1.2 * math.cos(elapsed * 4.0)
+        dy = 1.0 * math.sin(elapsed * 4.0)
+        dz = 0.5 * math.sin(elapsed * 2.0)
+        sender.send_input(dx=dx, dy=dy, dz=dz, orbit=False, zoom=False)
+        time.sleep(dt)
+    # Return cursor to rest
+    sender.send_input(dx=0.0, dy=0.0, dz=0.0)
+    print("  -> Cursor test complete. 5x5x5 cursor should have moved smoothly.")
+
 def run_click_test(sender: KjdSender, count: int = 3):
     print(f"\n[CLICK TEST] Emitting {count} left clicks with edge detection...")
     for i in range(count):
@@ -143,7 +160,7 @@ def run_calibrate_test(sender: KjdSender):
     sender.send_input(calibrate=True)
     time.sleep(0.05)
     sender.send_input(calibrate=False)
-    print("  -> Calibration sent. Cube orientation should be reset to default.")
+    print("  -> Calibration sent. Cube orientation and cursor should be reset to default.")
 
 def run_timeout_test(sender: KjdSender):
     print("\n[TIMEOUT TEST] Sending 3 packets then going silent for 0.5s...")
@@ -159,6 +176,9 @@ def run_all_tests(sender: KjdSender):
     print(f" Running Automated KJD UDP Receiver Smoke Test")
     print(f" Target: {sender.host}:{sender.port} | Device: {sender.device_id}")
     print("==================================================")
+
+    run_cursor_test(sender, duration=2.5)
+    time.sleep(0.5)
 
     run_click_test(sender, count=2)
     time.sleep(0.5)
@@ -186,10 +206,11 @@ def run_interactive(sender: KjdSender):
     print(f" Target: {sender.host}:{sender.port}")
     print("==================================================")
     print(" Commands:")
+    print("   m [dx dy dz]: Move 5x5x5 cursor by (dx, dy, dz) (default 5.0 0.0 0.0)")
     print("   o [seconds] : Orbit cube for N seconds (default 2)")
     print("   z [seconds] : Zoom camera for N seconds (default 2)")
     print("   c           : Send Left Click")
-    print("   r           : Send Calibration (Reset Orientation)")
+    print("   r           : Send Calibration (Reset Orientation & Cursor)")
     print("   t           : Test 250ms silence timeout")
     print("   q           : Quit")
     print("--------------------------------------------------")
@@ -202,6 +223,12 @@ def run_interactive(sender: KjdSender):
             action = cmd[0].lower()
             if action in ('q', 'exit', 'quit'):
                 break
+            elif action == 'm':
+                dx = float(cmd[1]) if len(cmd) > 1 else 5.0
+                dy = float(cmd[2]) if len(cmd) > 2 else 0.0
+                dz = float(cmd[3]) if len(cmd) > 3 else 0.0
+                sender.send_input(dx=dx, dy=dy, dz=dz)
+                print(f"  -> Sent cursor move: dx={dx}, dy={dy}, dz={dz}")
             elif action == 'o':
                 dur = float(cmd[1]) if len(cmd) > 1 else 2.0
                 run_orbit_test(sender, duration=dur)
@@ -217,7 +244,7 @@ def run_interactive(sender: KjdSender):
             elif action == 'all':
                 run_all_tests(sender)
             else:
-                print(f"Unknown command: '{action}'. Available: o, z, c, r, t, all, q")
+                print(f"Unknown command: '{action}'. Available: m, o, z, c, r, t, all, q")
         except (KeyboardInterrupt, EOFError):
             print("\nExiting.")
             break
@@ -230,13 +257,15 @@ def main():
     parser.add_argument("--port", type=int, default=9000, help="Target UDP port (default: 9000)")
     parser.add_argument("--device-id", default="kjd-test-sender-01", help="Client device ID string")
     parser.add_argument("--secret", default="", help="Optional shared HMAC secret")
-    parser.add_argument("--mode", choices=["orbit", "zoom", "click", "calibrate", "timeout", "all", "interactive"],
+    parser.add_argument("--mode", choices=["cursor", "orbit", "zoom", "click", "calibrate", "timeout", "all", "interactive"],
                         default="all", help="Test mode to run (default: all)")
     args = parser.parse_args()
 
     sender = KjdSender(host=args.host, port=args.port, device_id=args.device_id, secret=args.secret)
 
-    if args.mode == "orbit":
+    if args.mode == "cursor":
+        run_cursor_test(sender)
+    elif args.mode == "orbit":
         run_orbit_test(sender)
     elif args.mode == "zoom":
         run_zoom_test(sender)

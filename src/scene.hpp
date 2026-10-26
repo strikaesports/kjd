@@ -40,6 +40,15 @@ public:
     void setIdleWave(bool active) { m_idleWaveActive = active; }
     bool isIdleWaveActive() const { return m_idleWaveActive; }
 
+    // 5x5x5 Cursor control
+    void moveCursor(float deltaX, float deltaY, float deltaZ);
+    void setCursorPosition(float x, float y, float z);
+    void resetCursor();
+    Vec3 getCursorPosition() const { return m_cursorPos; }
+    int getCursorX() const { return static_cast<int>(std::round(m_cursorPos.x)); }
+    int getCursorY() const { return static_cast<int>(std::round(m_cursorPos.y)); }
+    int getCursorZ() const { return static_cast<int>(std::round(m_cursorPos.z)); }
+
 private:
     std::unique_ptr<VoxelVolume> m_voxelVolume;
 
@@ -55,7 +64,8 @@ private:
     Vec3 m_up{0.0f, 1.0f, 0.0f};
 
     float m_idleTimer{0.0f};
-    bool m_idleWaveActive{true};
+    bool m_idleWaveActive{false}; // Disabled by default per user request
+    Vec3 m_cursorPos{50.0f, 50.0f, 50.0f}; // Default 5x5x5 cursor centered at (50, 50, 50)
 };
 
 } // namespace kjd

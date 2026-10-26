@@ -260,7 +260,7 @@ bool Renderer::initGeometry() {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    // Setup dynamic VBO for voxel wave points
+    // Setup dynamic VBO for voxel cube rendering
     glGenVertexArrays(1, &m_voxelVao);
     glGenBuffers(1, &m_voxelVbo);
 
@@ -270,10 +270,10 @@ bool Renderer::initGeometry() {
     // Location 0: Pos (vec3)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VoxelVolume::VoxelVertex), (void*)offsetof(VoxelVolume::VoxelVertex, x));
     glEnableVertexAttribArray(0);
-    // Location 1: Normal (constant 0.0 for unlit points)
-    glVertexAttrib3f(1, 0.0f, 0.0f, 0.0f);
-    glDisableVertexAttribArray(1);
-    // Location 2: Color (vec3)
+    // Location 1: Normal (vec3)
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VoxelVolume::VoxelVertex), (void*)offsetof(VoxelVolume::VoxelVertex, nx));
+    glEnableVertexAttribArray(1);
+    // Location 2: Color (vec4/vec3)
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(VoxelVolume::VoxelVertex), (void*)offsetof(VoxelVolume::VoxelVertex, r));
     glEnableVertexAttribArray(2);
 
@@ -406,7 +406,8 @@ static void addText(std::vector<HudVertex>& verts, float x, float y, const std::
     }
 }
 
-void Renderer::renderHud(int width, int height, const InputState& inputState, const ReceiverStats& inputStats) {
+void Renderer::renderHud(int width, int height, const InputState& inputState, const ReceiverStats& inputStats,
+                         int cursorX, int cursorY, int cursorZ) {
     if (width <= 0 || height <= 0) return;
 
     std::vector<HudVertex> hudVerts;
@@ -470,10 +471,10 @@ void Renderer::renderHud(int width, int height, const InputState& inputState, co
              << "  dZ:" << (inputState.deltaZ >= 0.0f ? "+" : "") << inputState.deltaZ;
     addText(hudVerts, px + 12.0f, line3Y, deltaOss.str(), 1.0f, 0.85f, 0.90f, 0.95f, 0.95f);
 
-    // 5. Line 4: Packet Statistics & Throughput
+    // 5. Line 4: Packet Statistics & 5x5x5 Cursor Position
     float line4Y = py + 71.0f;
     std::string statStr = "Rx: " + std::to_string(inputStats.packetsAccepted) + " pkts" +
-                          " | Miss: " + std::to_string(inputStats.missingSequenceCount);
+                          " | Cur: [" + std::to_string(cursorX) + "," + std::to_string(cursorY) + "," + std::to_string(cursorZ) + "]";
     addText(hudVerts, px + 12.0f, line4Y, statStr, 1.0f, 0.55f, 0.65f, 0.75f, 0.85f);
 
     if (hudVerts.empty()) return;
@@ -571,7 +572,7 @@ void Renderer::render(const Scene& scene, int drawableWidth, int drawableHeight,
     glDrawArrays(GL_LINES, 0, 24);
     glBindVertexArray(0);
 
-    // Draw active diagonal voxel wave points inside the wireframe cube
+    // Draw active voxels inside the wireframe cube (contiguous 3D voxel cubes without gaps)
     if (scene.getVoxelVolume()) {
         const auto& voxelVertices = scene.getVoxelVolume()->getActiveVoxelVertices();
         if (!voxelVertices.empty()) {
@@ -582,9 +583,8 @@ void Renderer::render(const Scene& scene, int drawableWidth, int drawableHeight,
 
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glPointSize(3.5f);
 
-            glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(voxelVertices.size()));
+            glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(voxelVertices.size()));
 
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             glBindVertexArray(0);
@@ -594,7 +594,8 @@ void Renderer::render(const Scene& scene, int drawableWidth, int drawableHeight,
     glUseProgram(0);
 
     // 2. 2D HUD Mouse Status Overlay (Top-Right)
-    renderHud(renderW, renderH, inputState, inputStats);
+    renderHud(renderW, renderH, inputState, inputStats,
+              scene.getCursorX(), scene.getCursorY(), scene.getCursorZ());
 }
 
 void Renderer::cleanup() {

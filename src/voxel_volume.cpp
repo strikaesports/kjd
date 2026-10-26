@@ -47,6 +47,123 @@ void VoxelVolume::clear(VoxelColor clearColor) {
     m_activeVertices.clear();
 }
 
+void VoxelVolume::appendVoxelCubeVertices(float wx, float wy, float wz,
+                                         float dx, float dy, float dz,
+                                         float r, float g, float b, float a) {
+    float x0 = wx - dx * 0.5f;
+    float x1 = wx + dx * 0.5f;
+    float y0 = wy - dy * 0.5f;
+    float y1 = wy + dy * 0.5f;
+    float z0 = wz - dz * 0.5f;
+    float z1 = wz + dz * 0.5f;
+
+    // 6 faces * 2 triangles * 3 vertices = 36 vertices (standard CCW winding with surface normals)
+    // Front face (+Z, normal: 0, 0, 1)
+    m_activeVertices.push_back({x0, y0, z1, 0.0f, 0.0f, 1.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y0, z1, 0.0f, 0.0f, 1.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y1, z1, 0.0f, 0.0f, 1.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y0, z1, 0.0f, 0.0f, 1.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y1, z1, 0.0f, 0.0f, 1.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y1, z1, 0.0f, 0.0f, 1.0f, r, g, b, a});
+
+    // Back face (-Z, normal: 0, 0, -1)
+    m_activeVertices.push_back({x1, y0, z0, 0.0f, 0.0f, -1.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y0, z0, 0.0f, 0.0f, -1.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y1, z0, 0.0f, 0.0f, -1.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y0, z0, 0.0f, 0.0f, -1.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y1, z0, 0.0f, 0.0f, -1.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y1, z0, 0.0f, 0.0f, -1.0f, r, g, b, a});
+
+    // Top face (+Y, normal: 0, 1, 0)
+    m_activeVertices.push_back({x0, y1, z0, 0.0f, 1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y1, z1, 0.0f, 1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y1, z1, 0.0f, 1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y1, z0, 0.0f, 1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y1, z1, 0.0f, 1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y1, z0, 0.0f, 1.0f, 0.0f, r, g, b, a});
+
+    // Bottom face (-Y, normal: 0, -1, 0)
+    m_activeVertices.push_back({x0, y0, z0, 0.0f, -1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y0, z0, 0.0f, -1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y0, z1, 0.0f, -1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y0, z0, 0.0f, -1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y0, z1, 0.0f, -1.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y0, z1, 0.0f, -1.0f, 0.0f, r, g, b, a});
+
+    // Right face (+X, normal: 1, 0, 0)
+    m_activeVertices.push_back({x1, y0, z0, 1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y1, z0, 1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y1, z1, 1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y0, z0, 1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y1, z1, 1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x1, y0, z1, 1.0f, 0.0f, 0.0f, r, g, b, a});
+
+    // Left face (-X, normal: -1, 0, 0)
+    m_activeVertices.push_back({x0, y0, z0, -1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y0, z1, -1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y1, z1, -1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y0, z0, -1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y1, z1, -1.0f, 0.0f, 0.0f, r, g, b, a});
+    m_activeVertices.push_back({x0, y1, z0, -1.0f, 0.0f, 0.0f, r, g, b, a});
+}
+
+void VoxelVolume::updateCursor(int cx, int cy, int cz, int size, VoxelColor color) {
+    // Clear previously active voxels back to transparent black
+    for (size_t idx : m_previousActiveIndices) {
+        if (idx < m_voxelCount) {
+            m_data[idx] = VOXEL_TRANSPARENT_BLACK;
+        }
+    }
+    m_previousActiveIndices.clear();
+    m_activeVertices.clear();
+
+    m_cursorX = cx;
+    m_cursorY = cy;
+    m_cursorZ = cz;
+    m_cursorSize = size;
+
+    int half = size / 2;
+    int minX = std::max(0, cx - half);
+    int maxX = std::min(static_cast<int>(m_width - 1), cx + half);
+    int minY = std::max(0, cy - half);
+    int maxY = std::min(static_cast<int>(m_height - 1), cy + half);
+    int minZ = std::max(0, cz - half);
+    int maxZ = std::min(static_cast<int>(m_depth - 1), cz + half);
+
+    float baseR, baseG, baseB, baseA;
+    unpackRgba4444Normalized(color, baseR, baseG, baseB, baseA);
+
+    const float invW = 1.0f / static_cast<float>(m_width);
+    const float invH = 1.0f / static_cast<float>(m_height);
+    const float invD = 1.0f / static_cast<float>(m_depth);
+
+    size_t count = static_cast<size_t>((maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1));
+    m_activeVertices.reserve(count * 36);
+    m_previousActiveIndices.reserve(count);
+
+    for (int z = minZ; z <= maxZ; ++z) {
+        for (int y = minY; y <= maxY; ++y) {
+            for (int x = minX; x <= maxX; ++x) {
+                size_t idx = computeIndex(static_cast<size_t>(x), static_cast<size_t>(y), static_cast<size_t>(z));
+                m_data[idx] = color;
+                m_previousActiveIndices.push_back(idx);
+
+                // World position mapped to unit cube range [-0.5, 0.5]
+                float wx = -0.5f + (static_cast<float>(x) + 0.5f) * invW;
+                float wy = -0.5f + (static_cast<float>(y) + 0.5f) * invH;
+                float wz = -0.5f + (static_cast<float>(z) + 0.5f) * invD;
+
+                // Subtle checker shading so individual voxels are distinct without gaps
+                bool alt = ((x + y + z) & 1) != 0;
+                float shade = alt ? 0.90f : 1.0f;
+
+                appendVoxelCubeVertices(wx, wy, wz, invW, invH, invD,
+                                        baseR * shade, baseG * shade, baseB * shade, baseA);
+            }
+        }
+    }
+}
+
 void VoxelVolume::updateDiagonalWave(float timeSec, float speed, float pulseWidth) {
     // Clear previously active voxels back to transparent black
     for (size_t idx : m_previousActiveIndices) {
@@ -107,10 +224,8 @@ void VoxelVolume::updateDiagonalWave(float timeSec, float speed, float pulseWidt
                 float wy = -0.5f + (static_cast<float>(y) + 0.5f) * invH;
                 float wz = -0.5f + (static_cast<float>(z) + 0.5f) * invD;
 
-                m_activeVertices.push_back({
-                    wx, wy, wz,
-                    r / 15.0f, g / 15.0f, b / 15.0f, a / 15.0f
-                });
+                appendVoxelCubeVertices(wx, wy, wz, invW, invH, invD,
+                                        r / 15.0f, g / 15.0f, b / 15.0f, a / 15.0f);
             }
         }
     }

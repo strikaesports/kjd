@@ -381,8 +381,13 @@ bool InputReceiver::processDatagramBuffer(const uint8_t* buffer, size_t length, 
             m_latestState.deltaX = 0.0f;
             m_latestState.deltaY = 0.0f;
             m_latestState.deltaZ = dz;
+        } else if (!orbit && !zoom) {
+            // Mouse gadget movement (drives the 5x5x5 cursor)
+            m_latestState.deltaX = dx;
+            m_latestState.deltaY = dy;
+            m_latestState.deltaZ = dz;
         } else {
-            // Neither relevant button held, or both held conflictingly: do not apply movement
+            // Both held conflictingly: do not apply movement
             m_latestState.deltaX = 0.0f;
             m_latestState.deltaY = 0.0f;
             m_latestState.deltaZ = 0.0f;

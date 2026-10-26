@@ -34,6 +34,7 @@ struct AppConfig {
     float rotation_speed{35.0f}; // degrees per second
     float fov{60.0f};            // degrees
     float camera_distance{3.5f};
+    bool idle_animation{false};  // default false: idle animation disabled
 
     // Diagnostics / stats
     int stats_interval_sec{5};

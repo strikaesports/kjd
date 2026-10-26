@@ -34,6 +34,9 @@ fov = 60.0
 # Camera distance from the cube center (2.4 zooms closer for prominent view).
 camera_distance = 2.4
 
+# Enable idle diagonal voxel wave animation (default false: idle animation disabled, static 5x5x5 cursor).
+idle_animation = false
+
 [stats]
 # Interval in seconds between logging performance summaries (FPS, frame time).
 interval_sec = 5

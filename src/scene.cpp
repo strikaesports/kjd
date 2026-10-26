@@ -10,14 +10,21 @@ Scene::Scene(const AppConfig& config)
       m_yawAngle(35.0f),
       m_pitchAngle(22.0f),
       m_fov(config.fov),
-      m_cameraDistance(2.4f) { // Zoomed in closer for prominent voxel visibility
+      m_cameraDistance(2.4f), // Zoomed in closer for prominent voxel visibility
+      m_idleWaveActive(config.idle_animation),
+      m_cursorPos(50.0f, 50.0f, 50.0f) {
     m_cameraPos = Vec3(0.0f, 0.8f, m_cameraDistance);
     m_target = Vec3(0.0f, 0.0f, 0.0f);
     m_up = Vec3(0.0f, 1.0f, 0.0f);
 
     m_voxelVolume = std::make_unique<VoxelVolume>(100, 100, 100);
+    // Initialize default 5x5x5 cursor in the center of the cube
+    m_voxelVolume->updateCursor(50, 50, 50, 5);
+
     KJD_LOG_INFO("Allocated 100x100x100 voxel grid in RAM (",
                  m_voxelVolume->sizeBytes(), " bytes / ~1.91 MiB, format: RGBA4444)");
+    KJD_LOG_INFO("Default 5x5x5 cursor positioned in cube center (50, 50, 50). Idle animation: ",
+                 (m_idleWaveActive ? "ENABLED" : "DISABLED"));
 }
 
 void Scene::update(float deltaTime) {
@@ -55,6 +62,36 @@ void Scene::resetOrientation() {
     m_pitchAngle = 22.0f;
     m_cameraDistance = 2.4f;
     m_cameraPos = Vec3(0.0f, 0.8f, m_cameraDistance);
+}
+
+void Scene::moveCursor(float deltaX, float deltaY, float deltaZ) {
+    m_cursorPos.x += deltaX;
+    m_cursorPos.y += deltaY;
+    m_cursorPos.z += deltaZ;
+
+    // Clamp center so that 5x5x5 cursor stays strictly within [0, 99] bounds:
+    // With size 5 (half = 2): min = 2, max = 97.
+    m_cursorPos.x = std::clamp(m_cursorPos.x, 2.0f, 97.0f);
+    m_cursorPos.y = std::clamp(m_cursorPos.y, 2.0f, 97.0f);
+    m_cursorPos.z = std::clamp(m_cursorPos.z, 2.0f, 97.0f);
+
+    if (m_voxelVolume) {
+        m_voxelVolume->updateCursor(getCursorX(), getCursorY(), getCursorZ(), 5);
+    }
+}
+
+void Scene::setCursorPosition(float x, float y, float z) {
+    m_cursorPos.x = std::clamp(x, 2.0f, 97.0f);
+    m_cursorPos.y = std::clamp(y, 2.0f, 97.0f);
+    m_cursorPos.z = std::clamp(z, 2.0f, 97.0f);
+
+    if (m_voxelVolume) {
+        m_voxelVolume->updateCursor(getCursorX(), getCursorY(), getCursorZ(), 5);
+    }
+}
+
+void Scene::resetCursor() {
+    setCursorPosition(50.0f, 50.0f, 50.0f);
 }
 
 Mat4 Scene::getModelMatrix() const {

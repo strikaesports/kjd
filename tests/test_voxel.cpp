@@ -255,6 +255,32 @@ void runVoxelTests() {
         std::cout << "[PASS] 10. Diagonal wave oscillation from (0,0,0) to (99,99,99) verified." << std::endl;
     }
 
+    // 11. 5x5x5 Cursor positioning and bounds verification
+    {
+        VoxelVolume vol(100, 100, 100);
+        vol.updateCursor(50, 50, 50, 5, 0xF48C);
+
+        TEST_ASSERT(vol.activeVoxelCount() == 125);
+        TEST_ASSERT(vol.activeVertexCount() == 125 * 36);
+
+        // Check center and boundary of the 5x5x5 block (48..52)
+        TEST_ASSERT(vol.getVoxel(50, 50, 50) == 0xF48C);
+        TEST_ASSERT(vol.getVoxel(48, 48, 48) == 0xF48C);
+        TEST_ASSERT(vol.getVoxel(52, 52, 52) == 0xF48C);
+
+        // Voxels outside 5x5x5 cursor must be transparent
+        TEST_ASSERT(vol.getVoxel(47, 50, 50) == VOXEL_TRANSPARENT_BLACK);
+        TEST_ASSERT(vol.getVoxel(53, 50, 50) == VOXEL_TRANSPARENT_BLACK);
+
+        // Move cursor to another location (30, 40, 60)
+        vol.updateCursor(30, 40, 60, 5, 0xF48C);
+        TEST_ASSERT(vol.getVoxel(30, 40, 60) == 0xF48C);
+        // Previous position must now be restored to transparent
+        TEST_ASSERT(vol.getVoxel(50, 50, 50) == VOXEL_TRANSPARENT_BLACK);
+
+        std::cout << "[PASS] 11. 5x5x5 cursor positioning, 125-voxel volume representation and movement verified." << std::endl;
+    }
+
     std::cout << "=============================================" << std::endl;
     std::cout << " ALL VOXEL FORMAT & VOLUME TESTS PASSED!     " << std::endl;
     std::cout << "=============================================" << std::endl;
