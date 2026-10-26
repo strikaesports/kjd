@@ -34,51 +34,78 @@ bool InputReceiver::start(const InputConfig& config) {
 
     KJD_LOG_INFO("Initializing UDP Input Receiver on ", m_config.bind_address, ":", m_config.port, "...");
 
-    // Create UDP socket
-    m_socketFd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (m_socketFd < 0) {
-        KJD_LOG_ERROR("Failed to create UDP socket: ", strerror(errno));
-        return false;
-    }
-
-    // Set non-blocking or allow quick timeouts
-    int flags = fcntl(m_socketFd, F_GETFL, 0);
-    if (flags >= 0) {
-        fcntl(m_socketFd, F_SETFL, flags | O_NONBLOCK);
-    }
-
-    // Allow address reuse
-    int opt = 1;
-    setsockopt(m_socketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    sockaddr_in bindAddr{};
-    bindAddr.sin_family = AF_INET;
-    bindAddr.sin_port = htons(static_cast<uint16_t>(m_config.port));
-
+    // Create UDP socket (try dual-stack IPv6 socket first with IPV6_V6ONLY=0 to accept both IPv4 and IPv6)
+    bool isDualStack = false;
     if (m_config.bind_address == "0.0.0.0" || m_config.bind_address.empty()) {
-        bindAddr.sin_addr.s_addr = INADDR_ANY;
-    } else {
-        if (inet_pton(AF_INET, m_config.bind_address.c_str(), &bindAddr.sin_addr) <= 0) {
-            KJD_LOG_ERROR("Invalid bind address specified: ", m_config.bind_address);
+        m_socketFd = socket(AF_INET6, SOCK_DGRAM, 0);
+        if (m_socketFd >= 0) {
+            int v6only = 0; // Accept both IPv4 and IPv6 on same socket
+            if (setsockopt(m_socketFd, IPPROTO_IPV6, IPV6_V6ONLY, &v6only, sizeof(v6only)) == 0) {
+                int opt = 1;
+                setsockopt(m_socketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+                int flags = fcntl(m_socketFd, F_GETFL, 0);
+                if (flags >= 0) fcntl(m_socketFd, F_SETFL, flags | O_NONBLOCK);
+
+                sockaddr_in6 bindAddr6{};
+                bindAddr6.sin6_family = AF_INET6;
+                bindAddr6.sin6_port = htons(static_cast<uint16_t>(m_config.port));
+                bindAddr6.sin6_addr = in6addr_any;
+
+                if (bind(m_socketFd, reinterpret_cast<sockaddr*>(&bindAddr6), sizeof(bindAddr6)) == 0) {
+                    isDualStack = true;
+                    m_stats.boundAddress = "0.0.0.0 (dual-stack IPv4/IPv6)";
+                } else {
+                    close(m_socketFd);
+                    m_socketFd = -1;
+                }
+            } else {
+                close(m_socketFd);
+                m_socketFd = -1;
+            }
+        }
+    }
+
+    if (!isDualStack) {
+        // Fall back to standard IPv4 socket
+        m_socketFd = socket(AF_INET, SOCK_DGRAM, 0);
+        if (m_socketFd < 0) {
+            KJD_LOG_ERROR("Failed to create UDP socket: ", strerror(errno));
+            return false;
+        }
+
+        int flags = fcntl(m_socketFd, F_GETFL, 0);
+        if (flags >= 0) fcntl(m_socketFd, F_SETFL, flags | O_NONBLOCK);
+
+        int opt = 1;
+        setsockopt(m_socketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+        sockaddr_in bindAddr{};
+        bindAddr.sin_family = AF_INET;
+        bindAddr.sin_port = htons(static_cast<uint16_t>(m_config.port));
+
+        if (m_config.bind_address == "0.0.0.0" || m_config.bind_address.empty()) {
+            bindAddr.sin_addr.s_addr = INADDR_ANY;
+        } else {
+            if (inet_pton(AF_INET, m_config.bind_address.c_str(), &bindAddr.sin_addr) <= 0) {
+                KJD_LOG_ERROR("Invalid bind address specified: ", m_config.bind_address);
+                close(m_socketFd);
+                m_socketFd = -1;
+                return false;
+            }
+        }
+
+        if (bind(m_socketFd, reinterpret_cast<sockaddr*>(&bindAddr), sizeof(bindAddr)) < 0) {
+            KJD_LOG_ERROR("Failed to bind UDP socket to ", m_config.bind_address, ":", m_config.port, ": ", strerror(errno));
+            KJD_LOG_ERROR("Verify that no other service is using port ", m_config.port, " and that firewall allows incoming UDP traffic.");
             close(m_socketFd);
             m_socketFd = -1;
             return false;
         }
+        m_stats.boundAddress = m_config.bind_address;
     }
 
-    if (bind(m_socketFd, reinterpret_cast<sockaddr*>(&bindAddr), sizeof(bindAddr)) < 0) {
-        KJD_LOG_ERROR("Failed to bind UDP socket to ", m_config.bind_address, ":", m_config.port, ": ", strerror(errno));
-        KJD_LOG_ERROR("Verify that no other service is using port ", m_config.port, " and that firewall allows incoming UDP traffic.");
-        close(m_socketFd);
-        m_socketFd = -1;
-        return false;
-    }
-
-    // Query actual bound port if 0 was passed
-    socklen_t addrLen = sizeof(bindAddr);
-    getsockname(m_socketFd, reinterpret_cast<sockaddr*>(&bindAddr), &addrLen);
-    m_stats.boundPort = ntohs(bindAddr.sin_port);
-    m_stats.boundAddress = m_config.bind_address;
+    m_stats.boundPort = m_config.port;
 
     KJD_LOG_INFO("UDP Input Receiver successfully bound to ", m_stats.boundAddress, ":", m_stats.boundPort);
     KJD_LOG_INFO("  Timeout limit: ", m_config.timeout_ms, " ms");
@@ -472,15 +499,34 @@ void InputReceiver::workerLoop() {
         auto now = std::chrono::steady_clock::now();
 
         if (pollRet > 0 && (pfd.revents & POLLIN)) {
-            sockaddr_in srcAddr{};
-            socklen_t srcLen = sizeof(srcAddr);
+            sockaddr_storage srcStorage{};
+            socklen_t srcLen = sizeof(srcStorage);
 
             ssize_t bytesRead = recvfrom(m_socketFd, buffer, sizeof(buffer), 0,
-                                         reinterpret_cast<sockaddr*>(&srcAddr), &srcLen);
+                                         reinterpret_cast<sockaddr*>(&srcStorage), &srcLen);
             if (bytesRead > 0) {
-                char ipStr[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &srcAddr.sin_addr, ipStr, sizeof(ipStr));
-                std::string remoteAddr = std::string(ipStr) + ":" + std::to_string(ntohs(srcAddr.sin_port));
+                char ipStr[INET6_ADDRSTRLEN] = {0};
+                int port = 0;
+                if (srcStorage.ss_family == AF_INET) {
+                    auto* s4 = reinterpret_cast<sockaddr_in*>(&srcStorage);
+                    inet_ntop(AF_INET, &s4->sin_addr, ipStr, sizeof(ipStr));
+                    port = ntohs(s4->sin_port);
+                } else if (srcStorage.ss_family == AF_INET6) {
+                    auto* s6 = reinterpret_cast<sockaddr_in6*>(&srcStorage);
+                    if (IN6_IS_ADDR_V4MAPPED(&s6->sin6_addr)) {
+                        struct in_addr v4;
+                        std::memcpy(&v4, &s6->sin6_addr.s6_addr[12], sizeof(v4));
+                        inet_ntop(AF_INET, &v4, ipStr, sizeof(ipStr));
+                    } else {
+                        inet_ntop(AF_INET6, &s6->sin6_addr, ipStr, sizeof(ipStr));
+                    }
+                    port = ntohs(s6->sin6_port);
+                }
+
+                std::string remoteAddr = std::string(ipStr) + ":" + std::to_string(port);
+                if (m_stats.packetsReceived == 0) {
+                    KJD_LOG_INFO("First incoming UDP datagram received from ", remoteAddr, " (", bytesRead, " bytes)!");
+                }
 
                 processDatagramBuffer(buffer, static_cast<size_t>(bytesRead), remoteAddr);
             }

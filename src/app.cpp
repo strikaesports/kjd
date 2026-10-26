@@ -346,6 +346,9 @@ int App::run() {
         if (!s_running.load()) break;
 
         // 2. Process Mobile UDP Input Events and State
+        InputState inState;
+        ReceiverStats inStats;
+
         if (m_inputReceiver) {
             auto inputEvents = m_inputReceiver->drainEvents();
             for (const auto& ev : inputEvents) {
@@ -366,7 +369,9 @@ int App::run() {
                 }
             }
 
-            InputState inState = m_inputReceiver->getLatestState();
+            inState = m_inputReceiver->getLatestState();
+            inStats = m_inputReceiver->getStats();
+
             if (inState.connected) {
                 if (inState.orbitPressed) {
                     // Positive X: right -> increases yaw
@@ -394,8 +399,8 @@ int App::run() {
         // 4. Update 3D Scene
         m_scene->update(deltaTime);
 
-        // 5. Render Frame to Back Buffer
-        m_renderer->render(*m_scene, m_drawableWidth, m_drawableHeight);
+        // 5. Render Frame to Back Buffer (with active voxels & top-right HUD)
+        m_renderer->render(*m_scene, m_drawableWidth, m_drawableHeight, inState, inStats);
 
         // 5. Present Frame
         SDL_GL_SwapWindow(m_window);

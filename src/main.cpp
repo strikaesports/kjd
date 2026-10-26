@@ -58,6 +58,9 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--no-rotate") {
             disableRotate = true;
             overrideRotate = true;
+        } else if (arg == "--spin") {
+            disableRotate = false;
+            overrideRotate = true;
         } else if (arg == "--debug") {
             debugLogging = true;
         } else {
@@ -144,6 +147,8 @@ int main(int argc, char* argv[]) {
     if (overrideRotate) {
         config.rotate_cube = !disableRotate;
         KJD_LOG_INFO("CLI override: Cube rotation set to ", (config.rotate_cube ? "enabled" : "disabled"));
+    } else {
+        config.rotate_cube = false; // Stationary cube by default
     }
 
     try {

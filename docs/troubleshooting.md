@@ -123,25 +123,46 @@ systemctl --user restart kjd.service
 
 ---
 
-### Issue F: UDP Packets Not Received / Mobile Controller Not Connecting
+### Issue F: UDP Packets Not Received / Mobile AirMouse 3D Not Connecting
 
-**Symptoms**: `[Input Stats] Connected: No | Packets: 0 accepted` remains at 0 even when the mobile app or sender script is running.
+**Symptoms**: In logs or top-right HUD, `AIRMOUSE: WAITING... :45821` and `Packets: 0 accepted` remain at 0 even after pressing "CONNECT" in the mobile app.
 
-**Resolution**:
-1. Check if the Ubuntu Server firewall is blocking UDP port 45821:
+**Why this happens and how to resolve**:
+
+1. **Firewall Blocking Port 45821 (Most Common)**:
+   Ubuntu Server drops incoming UDP on non-standard ports by default. Allow UDP port 45821:
    ```bash
-   sudo ufw status
    sudo ufw allow 45821/udp
    ```
-2. Verify KJD is listening on `0.0.0.0:45821`:
+
+2. **Incorrect Host IP in Mobile App**:
+   The phone needs the **local network IPv4 address** of the Ubuntu Server.
+   Find your server's LAN IP:
+   ```bash
+   hostname -I
+   ```
+   *(e.g., `192.168.1.150` or `10.0.0.50`)*.
+   - Enter THAT exact IP into the **Host IP** field in the Android app.
+   - **Do NOT use `127.0.0.1` or `localhost`** on the phone — that points to the phone itself!
+
+3. **Verify Port & Dual-Stack Socket on Server**:
+   Check if KJD is actively listening on port 45821:
    ```bash
    ss -ulnp | grep 45821
    ```
-3. Check for Wi-Fi AP isolation on your router: Some home/office routers isolate Wi-Fi devices from talking to other local IPs.
-4. Test locally on the server using the test sender tool:
+   You should see `*:45821` or `[::]:45821`.
+
+4. **Wi-Fi Subnet / Router AP Isolation**:
+   - Both your phone and the server must be connected to the same Wi-Fi router/subnet.
+   - Some routers enable "AP Isolation" or "Guest Network", preventing Wi-Fi devices from talking to other local IPs. Verify your phone can reach the server.
+
+5. **Test Network Connectivity from Another Machine**:
+   Test sending packets to the server over Wi-Fi:
    ```bash
-   python3 scripts/test_udp_sender.py --host 127.0.0.1 --mode all
+   python3 scripts/test_udp_sender.py --host <SERVER_LAN_IP> --mode click
    ```
+   As soon as a packet arrives, the top-right HUD immediately turns green (`AIRMOUSE: CONNECTED`), and the server logs:
+   `First incoming UDP datagram received from <IP:port>!`
 
 ---
 

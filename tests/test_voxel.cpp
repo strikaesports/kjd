@@ -230,6 +230,31 @@ void runVoxelTests() {
         std::cout << "[PASS] 9. Coordinate 3D <-> 1D mapping and bounds safety verified." << std::endl;
     }
 
+    // 10. Diagonal wave oscillation verification
+    {
+        VoxelVolume vol(100, 100, 100);
+
+        // Near corner (0,0,0): sin(t * speed) = -1.0 => center = 0.0
+        // -pi/2 is -1.5707963 rad => sin(-1.5707963) = -1.0
+        vol.updateDiagonalWave(-1.5707963f, 1.0f, 0.08f);
+        TEST_ASSERT(vol.activeVoxelCount() > 0);
+        // Corner (0,0,0) must be active
+        TEST_ASSERT(vol.getVoxel(0, 0, 0) != VOXEL_TRANSPARENT_BLACK);
+        // Diagonally opposite (99,99,99) must be transparent
+        TEST_ASSERT(vol.getVoxel(99, 99, 99) == VOXEL_TRANSPARENT_BLACK);
+
+        // Near opposite corner (99,99,99): sin(t * speed) = 1.0 => center = 1.0
+        // pi/2 is 1.5707963 rad => sin(1.5707963) = 1.0
+        vol.updateDiagonalWave(1.5707963f, 1.0f, 0.08f);
+        TEST_ASSERT(vol.activeVoxelCount() > 0);
+        // Corner (99,99,99) must be active
+        TEST_ASSERT(vol.getVoxel(99, 99, 99) != VOXEL_TRANSPARENT_BLACK);
+        // Corner (0,0,0) must now be reset back to transparent black
+        TEST_ASSERT(vol.getVoxel(0, 0, 0) == VOXEL_TRANSPARENT_BLACK);
+
+        std::cout << "[PASS] 10. Diagonal wave oscillation from (0,0,0) to (99,99,99) verified." << std::endl;
+    }
+
     std::cout << "=============================================" << std::endl;
     std::cout << " ALL VOXEL FORMAT & VOLUME TESTS PASSED!     " << std::endl;
     std::cout << "=============================================" << std::endl;

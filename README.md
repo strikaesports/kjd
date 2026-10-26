@@ -241,11 +241,12 @@ kjd/
 ├── src/
 │   ├── main.cpp               # Entry point, CLI argument parsing, environment check
 │   ├── app.hpp / app.cpp      # Application lifecycle, input events, render loop
-│   ├── renderer.hpp / .cpp    # OpenGL context probe, shaders, wireframe cube geometry
+│   ├── renderer.hpp / .cpp    # OpenGL context probe, shaders, wireframe cube & HUD
 │   ├── scene.hpp / .cpp       # 3D transforms, orbit/zoom navigation, holds VoxelVolume
 │   ├── voxel_color.hpp        # RGBA4444 16-bit color packing, unpacking, expansion
-│   ├── voxel_volume.hpp / .cpp# Dense 100x100x100 (2MB) RAM voxel volume
-│   ├── input_receiver.hpp/.cpp# UDP Protocol v1 input receiver worker thread
+│   ├── voxel_volume.hpp / .cpp# Dense 100x100x100 (2MB) RAM volume & diagonal wave
+│   ├── font8x8.hpp / .cpp     # Embedded 8x8 bitmap font for top-right HUD display
+│   ├── input_receiver.hpp/.cpp# UDP Protocol v1 dual-stack input receiver
 │   ├── json_helper.hpp        # Lightweight zero-dependency JSON parser
 │   ├── crypto_helper.hpp      # Zero-dependency SHA256 & HMAC-SHA256
 │   ├── math3d.hpp             # Zero-dependency 3D vector and matrix math
@@ -259,7 +260,8 @@ kjd/
 ├── scripts/
 │   ├── build.sh               # Target native build and user service configuration
 │   ├── test_udp_sender.py     # Mobile controller simulator & automated smoke tester
-│   ├── diagnostics.sh         # Read-only system, GPU, and service diagnostics
+│   ├── idle_voxel_wave.py     # Idle diagonal voxel wave simulation & visualizer
+│   ├── diagnostics.sh         # Read-only system, GPU, network, and service diagnostics
 │   ├── install_deps_ubuntu.sh # Ubuntu Server dependency installation
 │   └── kjd-session.sh         # DE session launcher for Ubuntu Server / KMSDRM / Wayland
 └── docs/

@@ -5,28 +5,32 @@
 namespace kjd {
 
 Scene::Scene(const AppConfig& config)
-    : m_rotateCube(config.rotate_cube),
-      m_rotationSpeed(config.rotation_speed),
+    : m_rotateCube(false), // Auto-spin stopped altogether
+      m_rotationSpeed(0.0f),
       m_yawAngle(35.0f),
-      m_pitchAngle(25.0f),
+      m_pitchAngle(22.0f),
       m_fov(config.fov),
-      m_cameraDistance(config.camera_distance) {
-    m_cameraPos = Vec3(0.0f, 1.2f, m_cameraDistance);
+      m_cameraDistance(2.4f) { // Zoomed in closer for prominent voxel visibility
+    m_cameraPos = Vec3(0.0f, 0.8f, m_cameraDistance);
     m_target = Vec3(0.0f, 0.0f, 0.0f);
     m_up = Vec3(0.0f, 1.0f, 0.0f);
 
     m_voxelVolume = std::make_unique<VoxelVolume>(100, 100, 100);
     KJD_LOG_INFO("Allocated 100x100x100 voxel grid in RAM (",
-                 m_voxelVolume->sizeBytes(), " bytes / ~1.91 MiB, format: RGBA4444, invisible/transparent)");
+                 m_voxelVolume->sizeBytes(), " bytes / ~1.91 MiB, format: RGBA4444)");
 }
 
 void Scene::update(float deltaTime) {
-    if (m_rotateCube) {
+    // Auto-spin permanently disabled. Cube only rotates via AirMouse / user commands.
+    if (m_rotateCube && m_rotationSpeed > 0.0f) {
         m_yawAngle += m_rotationSpeed * deltaTime;
         if (m_yawAngle >= 360.0f) m_yawAngle -= 360.0f;
+    }
 
-        // Subtle secondary oscillation on pitch for dynamic visual confirmation
-        m_pitchAngle = 20.0f + 10.0f * std::sin(radians(m_yawAngle * 0.7f));
+    // Advance idle voxel diagonal wave oscillation
+    m_idleTimer += deltaTime;
+    if (m_idleWaveActive && m_voxelVolume) {
+        m_voxelVolume->updateDiagonalWave(m_idleTimer);
     }
 }
 
@@ -42,15 +46,15 @@ void Scene::addOrbit(float deltaYaw, float deltaPitch) {
 void Scene::addZoom(float deltaZoom) {
     // Positive deltaZ (forward) zooms closer to the cube
     m_cameraDistance -= deltaZoom;
-    m_cameraDistance = std::clamp(m_cameraDistance, 1.2f, 15.0f);
-    m_cameraPos = Vec3(0.0f, 1.2f, m_cameraDistance);
+    m_cameraDistance = std::clamp(m_cameraDistance, 1.0f, 15.0f);
+    m_cameraPos = Vec3(0.0f, 0.8f, m_cameraDistance);
 }
 
 void Scene::resetOrientation() {
     m_yawAngle = 35.0f;
-    m_pitchAngle = 25.0f;
-    m_cameraDistance = 3.5f;
-    m_cameraPos = Vec3(0.0f, 1.2f, m_cameraDistance);
+    m_pitchAngle = 22.0f;
+    m_cameraDistance = 2.4f;
+    m_cameraPos = Vec3(0.0f, 0.8f, m_cameraDistance);
 }
 
 Mat4 Scene::getModelMatrix() const {

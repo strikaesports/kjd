@@ -94,6 +94,25 @@ else
 fi
 
 echo ""
+echo "--- [9] Network & AirMouse 3D Connectivity ---"
+echo "Server LAN IP(s):"
+if command -v hostname >/dev/null 2>&1; then
+    hostname -I 2>/dev/null || true
+fi
+echo ""
+echo "UDP Port 45821 Status:"
+if command -v ss >/dev/null 2>&1; then
+    ss -ulnp | grep 45821 || echo "Port 45821 is NOT listening. Ensure kjd.service is active."
+fi
+echo ""
+echo "Firewall (UFW) Status:"
+if command -v ufw >/dev/null 2>&1; then
+    ufw status 2>/dev/null || echo "(Run 'sudo ufw status' to inspect firewall rules)"
+fi
+echo ""
+echo "Tip: To allow the mobile app through the server firewall:"
+echo "     sudo ufw allow 45821/udp"
+echo ""
 echo "=================================================================="
 echo "                    END OF DIAGNOSTICS REPORT                    "
 echo "=================================================================="

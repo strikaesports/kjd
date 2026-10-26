@@ -31,8 +31,8 @@ rotation_speed = 35.0
 # Camera vertical field of view in degrees.
 fov = 60.0
 
-# Camera distance from the cube center.
-camera_distance = 3.5
+# Camera distance from the cube center (2.4 zooms closer for prominent view).
+camera_distance = 2.4
 
 [stats]
 # Interval in seconds between logging performance summaries (FPS, frame time).

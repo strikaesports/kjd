@@ -36,6 +36,7 @@ set(SOURCES
     src/logger.cpp
     src/input_receiver.cpp
     src/voxel_volume.cpp
+    src/font8x8.cpp
 )
 
 set(HEADERS
@@ -50,6 +51,7 @@ set(HEADERS
     src/crypto_helper.hpp
     src/voxel_color.hpp
     src/voxel_volume.hpp
+    src/font8x8.hpp
 )
 
 add_executable(kjd ${SOURCES} ${HEADERS})
