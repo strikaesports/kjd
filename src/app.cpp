@@ -282,6 +282,9 @@ void App::handleEvent(const SDL_Event& event) {
                     KJD_LOG_INFO("Cube rotation: ", (m_scene->isRotating() ? "Resumed" : "Paused"));
                 }
                 break;
+            default:
+                break;
+        }
     } else if (event.type == SDL_MOUSEMOTION) {
         if (event.motion.state & SDL_BUTTON_RMASK) {
             // Right-click drag orbits the cube
