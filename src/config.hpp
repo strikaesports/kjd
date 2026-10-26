@@ -7,7 +7,7 @@ namespace kjd {
 struct InputConfig {
     bool enabled{true};
     std::string bind_address{"0.0.0.0"};
-    int port{45821};
+    int port{9000};
     int timeout_ms{250};
     int max_datagram_bytes{1200};
     std::string authorized_device_id{""};

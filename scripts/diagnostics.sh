@@ -100,9 +100,9 @@ if command -v hostname >/dev/null 2>&1; then
     hostname -I 2>/dev/null || true
 fi
 echo ""
-echo "UDP Port 45821 Status:"
+echo "UDP Port 9000 Status:"
 if command -v ss >/dev/null 2>&1; then
-    ss -ulnp | grep 45821 || echo "Port 45821 is NOT listening. Ensure kjd.service is active."
+    ss -ulnp | grep 9000 || echo "Port 9000 is NOT listening. Ensure kjd.service is active."
 fi
 echo ""
 echo "Firewall (UFW) Status:"
@@ -111,7 +111,7 @@ if command -v ufw >/dev/null 2>&1; then
 fi
 echo ""
 echo "Tip: To allow the mobile app through the server firewall:"
-echo "     sudo ufw allow 45821/udp"
+echo "     sudo ufw allow 9000/udp"
 echo ""
 echo "=================================================================="
 echo "                    END OF DIAGNOSTICS REPORT                    "

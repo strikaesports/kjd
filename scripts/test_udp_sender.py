@@ -5,7 +5,7 @@ KJD UDP Input Sender & Test Utility
 Simulates a mobile controller transmitting Protocol v1 UDP packets to KJD.
 
 Usage:
-  python3 test_udp_sender.py --host <server_ip> [--port 45821] [--mode orbit|zoom|click|calibrate|interactive|all]
+  python3 test_udp_sender.py --host <server_ip> [--port 9000] [--mode orbit|zoom|click|calibrate|interactive|all]
 
 Features:
   - Supports Protocol v1 JSON datagrams:
@@ -227,7 +227,7 @@ def run_interactive(sender: KjdSender):
 def main():
     parser = argparse.ArgumentParser(description="KJD UDP Mouse/Gyro Input Test Sender")
     parser.add_argument("--host", default="127.0.0.1", help="Target host/IP running KJD (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=45821, help="Target UDP port (default: 45821)")
+    parser.add_argument("--port", type=int, default=9000, help="Target UDP port (default: 9000)")
     parser.add_argument("--device-id", default="kjd-test-sender-01", help="Client device ID string")
     parser.add_argument("--secret", default="", help="Optional shared HMAC secret")
     parser.add_argument("--mode", choices=["orbit", "zoom", "click", "calibrate", "timeout", "all", "interactive"],

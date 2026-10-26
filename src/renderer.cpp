@@ -436,7 +436,7 @@ void Renderer::renderHud(int width, int height, const InputState& inputState, co
         // Dim amber/waiting badge
         addSolidQuad(hudVerts, px + 12.0f, line1Y + 1.0f, 8.0f, 8.0f, 1.0f, 0.6f, 0.1f, 0.9f);
         addText(hudVerts, px + 26.0f, line1Y, "AIRMOUSE: WAITING...", 1.0f, 1.0f, 0.7f, 0.2f, 0.95f);
-        std::string portStr = ":" + std::to_string(inputStats.boundPort > 0 ? inputStats.boundPort : 45821);
+        std::string portStr = ":" + std::to_string(inputStats.boundPort > 0 ? inputStats.boundPort : 9000);
         addText(hudVerts, px + 215.0f, line1Y, portStr, 1.0f, 0.6f, 0.6f, 0.65f, 0.85f);
     }
 

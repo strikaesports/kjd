@@ -46,7 +46,7 @@ enabled = true
 bind_address = "0.0.0.0"
 
 # UDP port for mobile input packets
-port = 45821
+port = 9000
 
 # Connection timeout in milliseconds (marks device disconnected after this duration of silence)
 timeout_ms = 250
